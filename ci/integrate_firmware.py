@@ -13,6 +13,7 @@ EFI_FILES = {
     "UniXNU": ("APPLICATION", "9B665204-A133-47A2-9396-9E2B370A4E25"),
     "UniXNUDxe": ("DRIVER", "29B950CF-586D-49EA-9D71-F88645CCDAF6"),
     "DarwinBoot": ("DRIVER", "1B64AF87-8415-4B57-9B16-680D70913B9F"),
+    "ChironProbe": ("APPLICATION", "72CC6991-82C4-4CE6-A571-599439D53E16"),
 }
 
 
@@ -65,16 +66,16 @@ def integrate(root, efi):
     boot = root / "Platforms/Msm8998FamilyPkg/Library/PlatformBootManagerLib/PlatformBm.c"
     text = boot.read_text()
     text = replace_once(text, "#define DP_NODE_LEN(Type)", (
-        "STATIC EFI_GUID gChironUniXnuFileGuid = "
-        "{0x9b665204,0xa133,0x47a2,{0x93,0x96,0x9e,0x2b,0x37,0x0a,0x4e,0x25}};\n\n"
+        "STATIC EFI_GUID gChironProbeFileGuid = "
+        "{0x72cc6991,0x82c4,0x4ce6,{0xa5,0x71,0x59,0x94,0x39,0xd5,0x3e,0x16}};\n\n"
         "#define DP_NODE_LEN(Type)"
     ))
-    text = replace_once(text, '&gSimpleInitFileGuid, L"Simple Init"', '&gChironUniXnuFileGuid, L"UniXNU"')
+    text = replace_once(text, '&gSimpleInitFileGuid, L"Simple Init"', '&gChironProbeFileGuid, L"Chiron diagnostics"')
     text = replace_once(text, (
         '  PlatformRegisterFvBootOption(\n'
         '      &gLinuxSimpleMassStorageGuid, L"USB Attached SCSI (UAS) Storage", LOAD_OPTION_ACTIVE);'
     ), "  // No mass-storage boot entry in this bring-up firmware.")
-    text = text.replace("SimpleInitGUI", "UniXNU")
+    text = text.replace("SimpleInitGUI", "Chiron diagnostics")
     boot.write_text(text)
     return {
         "efi_sha256": hashes, "mass_storage_app_included": False,

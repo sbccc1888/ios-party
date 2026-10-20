@@ -27,6 +27,8 @@ python3 scripts/make-chiron-adt.py --output out/chiron/chiron.adt
 
 CI 另行编译 ArmDTPlatform 与 ArmCpu 静态库。其中 ArmCpu 已改为从 ADT 的 `virtual-timer-intid` 读取本机虚拟定时器中断号 19，保留上游 QEMU 的默认值 27。
 
+`ChironProbe.efi` 是无存储访问的应用级探针，显示原始 CPU 特性、GOP 和 UEFI 内存图。它不切换页表、不退出 boot services；固件侧键入口指向该探针，默认启动仍由 UniXNU registrar 注册。整个固件仍含 vendor 驱动，不能据此声称全链路无写入。
+
 ADT 使用真实 chiron 身份、单核、SMC、GICv3 和易失 NVRAM，不包含存储节点和伪造的 Apple 设备身份。它向 DarwinBoot 请求 1 GiB 实际 UEFI 分配，而不把 Android 的候选地址硬编码为可用窗口。
 
 旧 MSM8998 固件与新加载器分别用各自固定的 EDK II 基线编译，再把 EFI 二进制嵌入固件。编译成功仍需验证 UEFI 协议、最终内存图与入口行为；原平台含未审计的 vendor 驱动，编译产物不能因此称为无写入的诊断镜像。

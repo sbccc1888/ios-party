@@ -31,6 +31,9 @@ def main():
             elif item == "-o":
                 next(original)
                 arguments.extend(["-o", str(obj)])
+            elif item == "-MJ":
+                next(original)
+                arguments.extend(["-MJ", str(obj.with_suffix(".compile.json"))])
             elif item in ("-MF", "-serialize-diagnostics", "--serialize-diagnostics"):
                 next(original)
             else:
