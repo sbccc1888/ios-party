@@ -10,7 +10,10 @@ export WORKSPACE="$RUNNER_TEMP/chiron-efi-work"
 export PACKAGES_PATH="$ROOT/package:$SOURCE_ROOT/unixnu/package:$SOURCE_ROOT/unixnu/drivers/DarwinBoot:$EDK2"
 export EDK_TOOLS_PATH="$EDK2/BaseTools"
 export PYTHON_COMMAND=python3
-export CLANG_BIN=/usr/bin/
+export CLANG_BIN="$(llvm-config --bindir)/"
+test -x "${CLANG_BIN}clang"
+test -x "${CLANG_BIN}lld-link"
+test -x "${CLANG_BIN}llvm-lib"
 export PATH="$EDK_TOOLS_PATH/BinWrappers/PosixLike:$EDK_TOOLS_PATH/Source/C/bin:$PATH"
 mkdir -p "$WORKSPACE/Conf" "$ROOT/dist/efi"
 for name in target tools_def build_rule; do
