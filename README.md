@@ -14,6 +14,8 @@ GitHub Actions 工作流 `Chiron remote bring-up` 在源码推送时仅跑轻量
 - 不下载完整 IPSW，不生成 userdata 镜像，不执行 ADB/fastboot。
 - 每个任务设有超时，产物保留 7 天；不缓存完整编译树。
 
+固件集成重跑可填写 `efi_run_id`，复用同仓库此前成功生成的 `chiron-efi` 产物；该情况下跳过 EFI 重编译。更新 EFI 源码后应留空，重新编译。
+
 本地验证：
 
 ```sh

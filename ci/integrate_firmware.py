@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -26,6 +27,8 @@ def replace_once(text, old, new):
 def integrate(root, efi):
     destination = root / "ChironPrebuilt"
     destination.mkdir(exist_ok=False)
+    # PI dependency opcodes: TRUE, END. Old FDF parsers expect a file here.
+    (destination / "Always.depex").write_bytes(bytes((0x06, 0x08)))
     hashes = {}
     for name in EFI_FILES:
         source = efi / (name + ".efi")
@@ -53,7 +56,7 @@ def integrate(root, efi):
     text = replace_once(text, "  INF src/main/SimpleInitMain.inf", "")
     embedded = []
     for name, (kind, guid) in EFI_FILES.items():
-        depex = "\n    SECTION DXE_DEPEX = { TRUE }" if kind == "DRIVER" else ""
+        depex = "\n    SECTION DXE_DEPEX = ChironPrebuilt/Always.depex" if kind == "DRIVER" else ""
         embedded.append(
             f"  FILE {kind} = {guid} {{{depex}\n"
             f"    SECTION PE32 = ChironPrebuilt/{name}.efi\n"
@@ -79,6 +82,7 @@ def integrate(root, efi):
     boot.write_text(text)
     return {
         "efi_sha256": hashes, "mass_storage_app_included": False,
+        "efi_source_run": os.environ.get("CHIRON_EFI_RUN"),
         "simpleinit_gui_included": False, "instruction_baseline": "armv8-a; no outline atomics",
         "hardware_boot_qualified": False,
         "limitations": ["Vendor DXE drivers are retained; no general no-write guarantee is asserted."],
