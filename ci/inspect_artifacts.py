@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import json
+import os
 import struct
 from pathlib import Path
 
@@ -40,6 +41,7 @@ def main():
         raise SystemExit("no EFI or source kernel artifacts found")
     (args.directory / "artifact-report.json").write_text(json.dumps({
         "artifacts": files, "hardware_executed": False,
+        "device_commit": os.environ.get("GITHUB_SHA"),
         "stage": "compiler validation; not a complete XNU boot payload",
     }, indent=2) + "\n")
     print(json.dumps(files, indent=2))
