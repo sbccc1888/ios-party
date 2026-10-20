@@ -1,0 +1,466 @@
+{
+  "schema": "chiron-measured-profile-v1",
+  "capture_date": "2026-10-20",
+  "user_reported": {
+    "ram_gb": 6,
+    "storage_gb": 128
+  },
+  "device": "chiron",
+  "soc_id": 292,
+  "soc_revision": "2.1",
+  "android_release": "15",
+  "security_patch": "2026-08-01",
+  "kernel_page_bytes": 4096,
+  "psci_method": "smc",
+  "cpu_affinities": [
+    0,
+    1,
+    2,
+    3,
+    256,
+    257,
+    258,
+    259
+  ],
+  "cpu_16k_granule_supported": null,
+  "raw_cpu_registers_read": false,
+  "memory_banks": [
+    {
+      "base": 1073741824,
+      "size": 3221225472,
+      "end_exclusive": 4294967296
+    },
+    {
+      "base": 4294967296,
+      "size": 3180068864,
+      "end_exclusive": 7475036160
+    }
+  ],
+  "static_reserved_regions": {
+    "/reserved-memory/removed_regions@85800000": [
+      {
+        "base": 2239758336,
+        "size": 57671680,
+        "end_exclusive": 2297430016
+      }
+    ],
+    "/reserved-memory/pil_adsp_region@0x8b200000": [
+      {
+        "base": 2334130176,
+        "size": 31457280,
+        "end_exclusive": 2365587456
+      }
+    ],
+    "/reserved-memory/spss_region@8ab00000": [
+      {
+        "base": 2326790144,
+        "size": 7340032,
+        "end_exclusive": 2334130176
+      }
+    ],
+    "/reserved-memory/splash_region@9d600000": [
+      {
+        "base": 2638217216,
+        "size": 37748736,
+        "end_exclusive": 2675965952
+      }
+    ],
+    "/reserved-memory/pil_ipa_gpu_region@95600000": [
+      {
+        "base": 2506096640,
+        "size": 1048576,
+        "end_exclusive": 2507145216
+      }
+    ],
+    "/reserved-memory/pil_slpi_region@94700000": [
+      {
+        "base": 2490368000,
+        "size": 15728640,
+        "end_exclusive": 2506096640
+      }
+    ],
+    "/reserved-memory/pil_mba_region@94500000": [
+      {
+        "base": 2488270848,
+        "size": 2097152,
+        "end_exclusive": 2490368000
+      }
+    ],
+    "/reserved-memory/pil_video_region@94000000": [
+      {
+        "base": 2483027968,
+        "size": 5242880,
+        "end_exclusive": 2488270848
+      }
+    ],
+    "/reserved-memory/modem_region@8d000000": [
+      {
+        "base": 2365587456,
+        "size": 117440512,
+        "end_exclusive": 2483027968
+      }
+    ],
+    "/reserved-memory/ramoops_region@b0000000": [
+      {
+        "base": 2952790016,
+        "size": 2097152,
+        "end_exclusive": 2954887168
+      }
+    ]
+  },
+  "memblock_memory": [
+    {
+      "base": 1073741824,
+      "size": 1166016512,
+      "end_exclusive": 2239758336
+    },
+    {
+      "base": 2297430016,
+      "size": 29360128,
+      "end_exclusive": 2326790144
+    },
+    {
+      "base": 2507145216,
+      "size": 445644800,
+      "end_exclusive": 2952790016
+    },
+    {
+      "base": 2954887168,
+      "size": 4520148992,
+      "end_exclusive": 7475036160
+    }
+  ],
+  "memblock_reserved": [
+    {
+      "base": 1074266112,
+      "size": 47382528,
+      "end_exclusive": 1121648640
+    },
+    {
+      "base": 1121652736,
+      "size": 8192,
+      "end_exclusive": 1121660928
+    },
+    {
+      "base": 1126170624,
+      "size": 405383,
+      "end_exclusive": 1126576007
+    },
+    {
+      "base": 1128267776,
+      "size": 1523682,
+      "end_exclusive": 1129791458
+    },
+    {
+      "base": 4118806528,
+      "size": 171966464,
+      "end_exclusive": 4290772992
+    },
+    {
+      "base": 4294930432,
+      "size": 32768,
+      "end_exclusive": 4294963200
+    },
+    {
+      "base": 4294967040,
+      "size": 56,
+      "end_exclusive": 4294967096
+    },
+    {
+      "base": 4294967104,
+      "size": 56,
+      "end_exclusive": 4294967160
+    },
+    {
+      "base": 4294967168,
+      "size": 56,
+      "end_exclusive": 4294967224
+    },
+    {
+      "base": 4294967232,
+      "size": 56,
+      "end_exclusive": 4294967288
+    },
+    {
+      "base": 7356815488,
+      "size": 12582912,
+      "end_exclusive": 7369398400
+    },
+    {
+      "base": 7369398416,
+      "size": 102754160,
+      "end_exclusive": 7472152576
+    },
+    {
+      "base": 7472549888,
+      "size": 4096,
+      "end_exclusive": 7472553984
+    },
+    {
+      "base": 7472557312,
+      "size": 768,
+      "end_exclusive": 7472558080
+    },
+    {
+      "base": 7472685056,
+      "size": 1761280,
+      "end_exclusive": 7474446336
+    },
+    {
+      "base": 7474446592,
+      "size": 96,
+      "end_exclusive": 7474446688
+    },
+    {
+      "base": 7474446720,
+      "size": 96,
+      "end_exclusive": 7474446816
+    },
+    {
+      "base": 7474446848,
+      "size": 352,
+      "end_exclusive": 7474447200
+    },
+    {
+      "base": 7474447232,
+      "size": 8,
+      "end_exclusive": 7474447240
+    },
+    {
+      "base": 7474455488,
+      "size": 595,
+      "end_exclusive": 7474456083
+    },
+    {
+      "base": 7474456128,
+      "size": 595,
+      "end_exclusive": 7474456723
+    },
+    {
+      "base": 7474456768,
+      "size": 595,
+      "end_exclusive": 7474457363
+    },
+    {
+      "base": 7474457408,
+      "size": 8,
+      "end_exclusive": 7474457416
+    },
+    {
+      "base": 7474457420,
+      "size": 1101,
+      "end_exclusive": 7474458521
+    },
+    {
+      "base": 7474458524,
+      "size": 51,
+      "end_exclusive": 7474458575
+    },
+    {
+      "base": 7474458576,
+      "size": 47,
+      "end_exclusive": 7474458623
+    },
+    {
+      "base": 7474458624,
+      "size": 577536,
+      "end_exclusive": 7475036160
+    }
+  ],
+  "candidate_owned_memory": {
+    "base": 4294967296,
+    "size": 1073741824,
+    "end_exclusive": 5368709120,
+    "passes_captured_android_map_checks": true,
+    "qualified_for_boot_image": false,
+    "remaining_checks": [
+      "UEFI final memory map",
+      "payload placement and lifetime",
+      "early-stage access and exceptions"
+    ]
+  },
+  "display": {
+    "width": 1080,
+    "height": 2160,
+    "virtual_size": [
+      1080,
+      4320
+    ],
+    "stride_bytes": 4352,
+    "bits_per_pixel": 32,
+    "pixels_per_scanline": 1088,
+    "panel": "jdi fhd video dsi panel",
+    "boot_panel_selector": "1:dsi:0:qcom,mdss_dsi_jdi_fhd_nt35596s_video:config2:1:none:cfg:single_dsi",
+    "splash_region_is_not_proof_of_scanout_base": true
+  },
+  "touch": {
+    "driver": "synaptics_dsi_force",
+    "input_name": "synaptics_dsx",
+    "bus": 5,
+    "i2c_address": 32,
+    "qup_mmio": 202870784,
+    "reset_gpio": 89,
+    "irq_gpio": 125,
+    "firmware_build_id": 2676394,
+    "exact_ic_model": null
+  },
+  "sda": {
+    "scsi_path": "/sys/devices/soc/1da4000.ufshc/host0/target0:0:0/0:0:0:0",
+    "logical_block_bytes": 4096,
+    "primary_header_crc_valid": true,
+    "primary_entries_crc_valid": true,
+    "backup_header_validated": false,
+    "backup_header_lba": 29513727,
+    "entry_count": 32,
+    "entry_bytes": 128,
+    "partitions": [
+      {
+        "number": 1,
+        "name": "switch",
+        "first_lba": 6,
+        "last_lba": 7,
+        "bytes": 8192
+      },
+      {
+        "number": 2,
+        "name": "ssd",
+        "first_lba": 8,
+        "last_lba": 15,
+        "bytes": 32768
+      },
+      {
+        "number": 3,
+        "name": "bk1",
+        "first_lba": 16,
+        "last_lba": 127,
+        "bytes": 458752
+      },
+      {
+        "number": 4,
+        "name": "bk2",
+        "first_lba": 128,
+        "last_lba": 191,
+        "bytes": 262144
+      },
+      {
+        "number": 5,
+        "name": "bk3",
+        "first_lba": 192,
+        "last_lba": 255,
+        "bytes": 262144
+      },
+      {
+        "number": 6,
+        "name": "keystore",
+        "first_lba": 256,
+        "last_lba": 383,
+        "bytes": 524288
+      },
+      {
+        "number": 7,
+        "name": "frp",
+        "first_lba": 384,
+        "last_lba": 511,
+        "bytes": 524288
+      },
+      {
+        "number": 8,
+        "name": "bk4",
+        "first_lba": 512,
+        "last_lba": 1023,
+        "bytes": 2097152
+      },
+      {
+        "number": 9,
+        "name": "misc",
+        "first_lba": 1024,
+        "last_lba": 2047,
+        "bytes": 4194304
+      },
+      {
+        "number": 10,
+        "name": "logfs",
+        "first_lba": 2048,
+        "last_lba": 4095,
+        "bytes": 8388608
+      },
+      {
+        "number": 11,
+        "name": "oops",
+        "first_lba": 4096,
+        "last_lba": 8191,
+        "bytes": 16777216
+      },
+      {
+        "number": 12,
+        "name": "bk5",
+        "first_lba": 8192,
+        "last_lba": 12287,
+        "bytes": 16777216
+      },
+      {
+        "number": 13,
+        "name": "bk6",
+        "first_lba": 12288,
+        "last_lba": 16383,
+        "bytes": 16777216
+      },
+      {
+        "number": 14,
+        "name": "persist",
+        "first_lba": 16384,
+        "last_lba": 32767,
+        "bytes": 67108864
+      },
+      {
+        "number": 15,
+        "name": "recovery",
+        "first_lba": 32768,
+        "last_lba": 49151,
+        "bytes": 67108864
+      },
+      {
+        "number": 16,
+        "name": "cache",
+        "first_lba": 49152,
+        "last_lba": 114687,
+        "bytes": 268435456
+      },
+      {
+        "number": 17,
+        "name": "userdata",
+        "first_lba": 114688,
+        "last_lba": 29513722,
+        "bytes": 120418447360
+      }
+    ],
+    "userdata": {
+      "number": 17,
+      "name": "userdata",
+      "first_lba": 114688,
+      "last_lba": 29513722,
+      "bytes": 120418447360
+    },
+    "userdata_matches_sysfs": true
+  },
+  "boot_status": {
+    "reported_flash_locked_property": "1",
+    "reported_verified_boot_property": "green",
+    "reported_vbmeta_device_state_property": "locked",
+    "cmdline_verified_boot_state": "orange",
+    "fastboot_acceptance_tested": false
+  },
+  "limits": [
+    "Android runtime data does not qualify a future UEFI/XNU handoff.",
+    "No flash, reboot, register write, kernel module, or persistent setting change was performed.",
+    "Raw captures may contain identifiers; they remain in the Git-ignored artifacts directory."
+  ],
+  "evidence": {
+    "research/artifacts/chiron-live-20261020/runtime-fdt.dtb": "5de4c06643660b3d73d021149c8810ade9ebbed230c5ca4ae9882cbbd4207d19",
+    "research/artifacts/chiron-live-20261020/kernel-config.gz": "d153f993368fc7975d8222b5212c1d62121e4415903f65151a109d0d23f2de62",
+    "research/artifacts/chiron-live-20261020/input-devices.txt": "a499d01bb67d51c54a0145d234f62992b3c249096da5dddd3d70c053e55b58f1",
+    "research/artifacts/chiron-live-details-20261020/memblock-memory.txt": "8db1b86e88b0dfe7238b134a716244def4c16fc96d0d3783369be3c5a016388c",
+    "research/artifacts/chiron-live-details-20261020/memblock-reserved.txt": "a77e3535243c9933dc8fbbc3d6fbeb611eebd7ca64498519ec03adaf31b26150",
+    "research/artifacts/chiron-live-details-20261020/sda-primary-gpt.bin": "03e9e4ec8e6b971911b3c39bdb714f1401cf5541ea179502f42d806900d5bfe5"
+  }
+}

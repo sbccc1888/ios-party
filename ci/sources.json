@@ -1,0 +1,20 @@
+{
+  "unixnu": {
+    "repository": "UniXNU/UniXNU",
+    "commit": "7b52e7968c76453cdc18b5aa174fc368d5293b91"
+  },
+  "uefi": {
+    "repository": "edk2-porting/edk2-msm8998",
+    "commit": "ace27110b9b9b6c591387d50cf748ec646402b4a",
+    "submodules": "Pinned by the parent gitlinks, including transitive dependencies"
+  },
+  "mu": {
+    "repository": "microsoft/mu_basecore",
+    "commit": "cfb93724a06ff86ff5ba971413368a7809ee42a5"
+  },
+  "xnu": {
+    "repository": "apple-oss-distributions/xnu",
+    "commit": "d8b80295118ef25ac3a784134bcf95cd8e88109f",
+    "tag": "xnu-10063.141.1"
+  }
+}

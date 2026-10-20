@@ -1,0 +1,40 @@
+[board]
+name = "chiron"
+soc = "MSM8998"
+description = "Xiaomi Mi MIX 2, 6 GB / 128 GB; measured revision 2.1"
+kit = "chiron"
+
+[kernel]
+defconfig = "chiron_defconfig"
+
+# Measured primary GPT geometry; no workflow formats or flashes this partition.
+[userdata]
+first_lba = 0x1c000
+last_lba = 0x1c257fa
+lba_bytes = 4096
+
+[bootimg.image]
+header_version = 0
+pagesize = 4096
+base = 0
+kernel_offset = 0x8000
+ramdisk_offset = 0x1000000
+tags_offset = 0x100
+
+# Native source compilation is independent of IPSW/prelink in this first stage.
+# The old MSM8998 firmware is built by ci/build-firmware.sh, not Mu-Silicium.
+[bringup]
+stage = "compile-and-inspect"
+hardware_boot_qualified = false
+profile = "research/chiron-live-profile.json"
+cpu_count = 1
+kernel_page_bytes = 4096
+timer_frequency = 19200000
+virtual_timer_intid = 19
+gicd = 0x17a00000
+gicd_size = 0x10000
+gicr = 0x17b00000
+gicr_size = 0x100000
+redistributor_stride = 0x20000
+arm_io_base = 0x1000000
+arm_io_size = 0xff000000

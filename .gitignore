@@ -1,0 +1,13 @@
+research/artifacts/
+__pycache__/
+/out/
+/.cache/
+/dist/
+/build/
+/local.toml
+/unixnu.lock
+*.ipsw
+*.dmg
+*.img
+*.dtb
+*.adt
