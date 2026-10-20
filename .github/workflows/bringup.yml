@@ -1,6 +1,17 @@
 name: Chiron remote bring-up
 
 on:
+  push:
+    branches: ['codex/**']
+    paths:
+      - '.github/workflows/**'
+      - 'ci/**'
+      - 'scripts/**'
+      - 'drivers/**'
+      - 'tests/**'
+      - 'board.toml'
+      - 'configs/**'
+      - 'research/chiron-live-profile.json'
   workflow_dispatch:
     inputs:
       build_kernel:

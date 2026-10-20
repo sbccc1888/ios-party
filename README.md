@@ -6,7 +6,7 @@
 
 ## 构建方式
 
-GitHub Actions 工作流 `Chiron remote bring-up` 仅手动触发：
+GitHub Actions 工作流 `Chiron remote bring-up` 在源码推送时仅跑轻量验证；真正的编译任务仅手动触发：
 
 - Linux runner 编译 AArch64 UniXNU、DarwinBoot 和 MSM8998 固件。
 - macOS runner 编译 4 KiB XNU 源内核与平台驱动静态库。
