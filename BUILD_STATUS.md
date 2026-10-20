@@ -2,7 +2,7 @@
 
 日期：2026-10-20。私有仓库：`to-mid/ios-party`，分支：`codex/chiron-bringup`。
 
-已完成板级配置、单核 ADT、定时器中断适配、远程编译、固件集成和本地独立校验。本轮没有重启、临时启动或刷写手机；尚未证明 XNU 或 iOS 用户态在 MIX 2 上运行。
+已完成板级配置、单核 ADT、定时器中断适配、远程编译、固件集成和本地独立校验。构建阶段未操作手机；随后首次临时启动的状态见文末。尚未证明 XNU 或 iOS 用户态在 MIX 2 上运行。
 
 ## 成功作业
 
@@ -57,6 +57,22 @@ chiron-uefi-experimental.img
 
 源内核仍使用 bootstrap 配置，平台、CPU、密码学和 pthread 等外部组件需要后续链接/初始化，随后才能做 RAM init 心跳验证。当前固件容器只提供 UEFI、管理器和探针，不能据本轮编译结果声称 XNU 已能启动。
 
-下一步先审核固件接管时的地址与保留区，再通过 USB fastboot 临时启动 UEFI 探针，取得 EL1 可见的原始 CPU 特性、GOP 和实际固件内存图；之后据结果配置真正的 XNU 启动 payload。
+UEFI 探针现已成功执行，启动核心的 4 KiB 能力与 GOP 参数已记录。下一步补齐并链接平台、CPU、密码学、pthread 和最小 RAM 根环境，整理加载器所需的内核入口与负载，验证 XNU 日志和最小 init 心跳。加载器仍需从当时的 UEFI 内存图分配真实 owned memory。
 
 固件移除了 SimpleInit GUI 和 UAS 存储应用入口，但保留了 vendor DXE 驱动；仍没有全链路无写入的运行证明。原始设备采集与所有成品均被 Git 忽略。
+
+## 首次临时启动
+
+2026-10-20，用户报告进入 fastboot，USB 实测 product 为 `chiron`，bootloader 和 critical 均报告已解锁，最大传输大小为 536,870,912 字节。
+
+对上述 SHA-256 的实验镜像执行了一次 `fastboot boot`：
+
+```text
+Sending 'boot.img' (1492 KB)  OKAY [0.037s]
+Booting                     OKAY [0.001s]
+Finished. Total time: 0.040s
+```
+
+之后 fastboot 设备列表为空。随后用户报告成功进入 UEFI，并提供了探针照片：可见 EL1 寄存器输出和等待按键，确认 ChironProbe 已执行。启动 CPU 的 TGran4=0、TGran16=0；GOP 为 1080×2160、pitch=1080、base=`0x9d400000`。详细转录见 [UEFI 探针观察](research/CHIRON_UEFI_PROBE.zh-CN.md)。
+
+仍未确认 XNU 运行。未执行分区刷写或擦除命令。原始命令输出位于 `research/artifacts/chiron-firstboot-20261020/fastboot-boot.log`。

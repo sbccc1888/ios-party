@@ -22,8 +22,36 @@
     258,
     259
   ],
-  "cpu_16k_granule_supported": null,
-  "raw_cpu_registers_read": false,
+  "cpu_16k_granule_supported": false,
+  "raw_cpu_registers_read": true,
+  "cpu_register_scope": "EL1-visible boot CPU only; the other cluster was not sampled",
+  "uefi_observation": {
+    "evidence_kind": "manual transcription from the user-provided probe photograph",
+    "photo_sha256": "0ad25265fca3f71287f7c05ca4f06a61293236df3d2dd8e4692bed008aeff6c6",
+    "current_el_raw": "0x4",
+    "midr_el1": "0x51af8014",
+    "mpidr_el1": "0x80000000",
+    "id_aa64mmfr0_el1": "0x1122",
+    "id_aa64mmfr1_el1": "0x0",
+    "id_aa64isar0_el1": "0x11120",
+    "cntfrq_el0": 19200000,
+    "tgran4_raw": 0,
+    "tgran16_raw": 0,
+    "gop": {
+      "width": 1080,
+      "height": 2160,
+      "pixels_per_scanline": 1080,
+      "pixel_format_raw": 1,
+      "framebuffer_base": "0x9d400000",
+      "framebuffer_bytes": 9331200,
+      "stride_bytes": 4320
+    },
+    "conventional_region_count": 19,
+    "visible_memory_rows": 12,
+    "complete_memory_map_captured": false,
+    "memory_policy": "Photo is a partial snapshot; keep candidate allocation unqualified until the loader allocates it.",
+    "xnu_entry_observed": false
+  },
   "memory_banks": [
     {
       "base": 1073741824,
@@ -448,11 +476,15 @@
     "reported_verified_boot_property": "green",
     "reported_vbmeta_device_state_property": "locked",
     "cmdline_verified_boot_state": "orange",
-    "fastboot_acceptance_tested": false
+    "fastboot_acceptance_tested": true,
+    "fastboot_oem_unlocked": true,
+    "fastboot_oem_critical_unlocked": true,
+    "uefi_probe_screen_observed": true
   },
   "limits": [
-    "Android runtime data does not qualify a future UEFI/XNU handoff.",
-    "No flash, reboot, register write, kernel module, or persistent setting change was performed.",
+    "Android runtime data and the partial UEFI photo do not qualify a future XNU handoff.",
+    "Android capture was read-only; a later fastboot boot and probe photograph are recorded separately. No partition flash or erase command was executed.",
+    "Top-level display stride is from Android; UEFI pitch is separately recorded in uefi_observation.gop.",
     "Raw captures may contain identifiers; they remain in the Git-ignored artifacts directory."
   ],
   "evidence": {

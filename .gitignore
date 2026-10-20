@@ -11,3 +11,5 @@ __pycache__/
 *.img
 *.dtb
 *.adt
+.DS_Store
+/research/upstream/

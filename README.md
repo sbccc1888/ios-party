@@ -1,8 +1,8 @@
-# MIX 2 / chiron XNU bring-up
+# ios-party
 
 基于 UniXNU 与 MSM8998 EDK2 的设备移植工程。目标设备为小米 MIX 2 6 GB / 128 GB，实测 SoC 修订 2.1、Synaptics 触控、JDI video 面板。
 
-当前阶段是远程编译和输入验证。尚未证明 XNU 在 MIX 2 上启动，也没有生成完整 iOS 用户态或可日常使用的系统。
+当前已完成远程编译和首次 UEFI/只读探针实机运行。探针确认启动 CPU 支持 4 KiB、不支持 16 KiB，继续采用 4 KiB 路线。尚未证明 XNU 在 MIX 2 上启动，也没有生成完整 iOS 用户态或可日常使用的系统。照片转录见 [UEFI 探针记录](research/CHIRON_UEFI_PROBE.zh-CN.md)。
 
 首轮内核、驱动库、EFI 和整合固件的远程编译均已通过。成品位置、哈希和验证边界见 [构建记录](BUILD_STATUS.md)。
 
@@ -48,5 +48,16 @@ ADT 使用真实 chiron 身份、单核、SMC、GICv3 和易失 NVRAM，不包�
 | `ci/sources.json` | 固定的上游源码提交 |
 | `ci/` | 远程构建、集成与产物校验 |
 | `tests/` | ADT 资源、NVRAM 和产物架构检查 |
+| `tools/` | boot 镜像解析、ADB 只读采集和 FDT/GPT 校验 |
+| `research/` | 移植评估、静态镜像分析及实机观察记录 |
 
 大文件、运行时原始采集、设备标识、Apple 镜像与本地构建目录均不进入 Git。上游驱动的许可保存在 `drivers/ArmCpu/LICENSE`。
+
+## 研究记录
+
+- [移植评估](research/MIX2_PORTING.zh-CN.md)
+- [boot.img 静态分析](research/CHIRON_BOOT_ANALYSIS.zh-CN.md)
+- [ADB 实机采集分析](research/CHIRON_LIVE_ANALYSIS.zh-CN.md)
+- [UEFI 探针照片转录](research/CHIRON_UEFI_PROBE.zh-CN.md)
+
+本地 `research/upstream/` 仅作为参考快照，不上传；上游入口和对应版本记录在移植评估中。重新采集 Android 数据时，将输出保存在 `research/artifacts/`，该目录被 Git 忽略。
