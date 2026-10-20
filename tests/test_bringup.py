@@ -1,6 +1,8 @@
 import importlib.util
 import json
 import struct
+import subprocess
+import sys
 import tempfile
 import tomllib
 import unittest
@@ -99,6 +101,24 @@ class BringupTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 artifact.inspect(path)
 
-
+    def test_firmware_header_must_cover_whole_volume(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "output"
+            output.mkdir()
+            dtb = root / "source/Platforms/Msm8998Pkg/Device/xiaomi/chiron/DeviceTreeBlob/Android/Android-chiron.dtb"
+            dtb.parent.mkdir(parents=True)
+            dtb.write_bytes(b"\xd0\x0d\xfe\xed")
+            fd = bytearray(0x600000)
+            fd[56:60] = b"ARM\x64"
+            struct.pack_into("<Q", fd, 16, 0x200000)
+            (output / "chiron-unixnu.fd").write_bytes(fd)
+            result = subprocess.run([
+                sys.executable, str(ROOT / "ci/pack_firmware.py"),
+                "--source", str(root / "source"), "--output", str(output),
+            ], capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(b"does not cover", result.stderr)
+            self.assertFalse((output / "chiron-uefi-experimental.img").exists())
 if __name__ == "__main__":
     unittest.main()

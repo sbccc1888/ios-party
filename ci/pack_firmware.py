@@ -18,6 +18,8 @@ def main():
     dtb = (args.source / "Platforms/Msm8998Pkg/Device/xiaomi/chiron/DeviceTreeBlob/Android/Android-chiron.dtb").read_bytes()
     if len(fd) != 0x600000 or fd[56:60] != b"ARM\x64":
         raise SystemExit("unexpected firmware size or ARM64 header")
+    if struct.unpack_from("<Q", fd, 16)[0] != len(fd):
+        raise SystemExit("ARM64 Image size does not cover the firmware volume")
     if dtb[:4] != b"\xd0\x0d\xfe\xed":
         raise SystemExit("unexpected Android device tree")
     kernel = gzip.compress(fd, mtime=0) + dtb
@@ -40,6 +42,7 @@ def main():
         "image": path.name, "sha256": hashlib.sha256(image).hexdigest(),
         "bytes": len(image), "header_version": 0,
         "firmware_sha256": hashlib.sha256(fd).hexdigest(),
+        "arm64_image_size": len(fd),
         "dtb_sha256": hashlib.sha256(dtb).hexdigest(),
         "hardware_executed": False, "contains_xnu_payload": False,
         "status": "experimental compiled container; no fastboot command is run",

@@ -52,6 +52,9 @@ def integrate(root, efi):
 
     fdf = root / "Platforms/Msm8998Pkg/Device/xiaomi/chiron/chiron.fdf"
     text = fdf.read_text()
+    text = replace_once(text, (
+        "0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, # image_size: 2 MB"
+    ), "0x00, 0x00, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, # image_size: 6 MB")
     text = replace_once(text, "    INF Platforms/Msm8998FamilyPkg/LinuxSimpleMassStorage/LinuxSimpleMassStorage.inf", "")
     text = replace_once(text, "  INF src/main/SimpleInitMain.inf", "")
     embedded = []
