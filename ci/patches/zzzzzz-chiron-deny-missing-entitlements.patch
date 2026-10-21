@@ -1,0 +1,16 @@
+diff --git a/iokit/Kernel/IOUserClient.cpp b/iokit/Kernel/IOUserClient.cpp
+--- a/iokit/Kernel/IOUserClient.cpp
++++ b/iokit/Kernel/IOUserClient.cpp
+@@ -1546,6 +1546,12 @@
+     const char * entitlement )
+ {
+ 	void *entitlement_object = NULL;
++#if defined(BCM2837) && defined(XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS) && XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS
++	/* No provider means no entitlement, never an affirmative grant. */
++	if (amfi == NULL) {
++		return NULL;
++	}
++#endif
+ 
+ 	if (task == NULL) {
+ 		task = current_task();

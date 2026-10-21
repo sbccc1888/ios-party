@@ -149,6 +149,10 @@ class BringupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "guard.inc").write_text(additions + "\n")
+            query_patch = ROOT / "ci/patches/zzzzzz-chiron-deny-missing-entitlements.patch"
+            query = "\n".join(line[1:] for line in query_patch.read_text().splitlines()
+                              if line.startswith("+") and not line.startswith("+++"))
+            (root / "queryguard.inc").write_text(query + "\n")
             executable = root / "guard-check"
             subprocess.run([
                 "cc", "-std=c99", "-Wall", "-Wextra", "-Werror",

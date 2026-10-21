@@ -17,10 +17,15 @@ static int check(struct cs_blob *cs_blob) {
 #include "guard.inc"
   return 1234;
 }
+static void *query(void) {
+#include "queryguard.inc"
+  return (void *)1;
+}
 int main(void) {
   struct directory cd = {0};
   struct cs_blob blob = {0,0,0,&cd};
   cd.nSpecialSlots = htonl(2);
+  if (query() != NULL) return 7;
   if (check(&blob) != 0) return 1;
   blob.csb_entitlements = (void *)1;
   if (check(&blob) != ENOTSUP) return 2;
@@ -34,6 +39,7 @@ int main(void) {
   cd.nSpecialSlots = htonl(5);
   if (check(&blob) != ENOTSUP) return 5;
   amfi = (void *)1;
+  if (query() != (void *)1) return 8;
   if (check(&blob) != 1234) return 6;
   return 0;
 }
