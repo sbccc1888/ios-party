@@ -32,9 +32,21 @@ def main():
                  "user_inspections = [('_results', 32), ('_user_page_size', 8), ('_old_length', 8)]",
                  "user_inspections = [('_results', 32), ('_user_page_size', 8), ('_old_length', 8), "
                  "('_chiron_heartbeats', 8), ('_chiron_init_status', 8)]")
+    observer = scripts / "qemu-entry/gdb-stop.py"
+    text = observer.read_text()
+    cpu_expression = "'cortex-a710' if args.qemu_accel == 'tcg' else 'host'"
+    if text.count(cpu_expression) != 3:
+        raise ValueError("QEMU command/report CPU contexts changed")
+    observer.write_text(text.replace(cpu_expression, "'cortex-a53' if args.qemu_accel == 'tcg' else 'host'"))
+    qemu_dt = scripts / "qemu-entry/make-dt.py"
+    text = qemu_dt.read_text()
+    if text.count("b'arm,cortex-a710\\0'") != 2:
+        raise ValueError("QEMU CPU identity contexts changed")
+    qemu_dt.write_text(text.replace("b'arm,cortex-a710\\0'", "b'arm,cortex-a53\\0'"))
     hashes = {}
     import hashlib
-    for name in ("build-corecrypto-14.py", "build-libpthread-kernel.py", "probe-darwinboot-xnu.py"):
+    for name in ("build-corecrypto-14.py", "build-libpthread-kernel.py", "probe-darwinboot-xnu.py",
+                 "qemu-entry/gdb-stop.py", "qemu-entry/make-dt.py"):
         hashes[name] = hashlib.sha256((scripts / name).read_bytes()).hexdigest()
     (args.tree / "build/chiron-recipe-overlays.json").write_text(json.dumps(hashes, indent=2) + "\n")
 

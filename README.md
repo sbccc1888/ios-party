@@ -20,6 +20,8 @@ GitHub Actions 工作流 `Chiron remote bring-up` 在源码推送时仅跑轻量
 
 `kernel_mode=ram-init` 增加源密码学、pthread、平台/CPU 与 mockfs 链接，并运行 QEMU POST 正反例和自有 PID 1 心跳测试。该模式需填写可用的 `efi_run_id`；其通过标准是 `runtime-test.json` 的真实运行观察，不能以编译成功代替。源密码学使用上游固定的第三方评价快照，来源信息保留在 `ci/sources.json` 和构建报告中，不声明厂商认证。
 
+源码诊断配置关闭依赖原始 AppleImage4/AMFI 的完整 trust-cache runtime；自有 init 仍进行构建时 ad-hoc 签名检查，但不声明 Apple 信任链或完整 iOS 安全模型。完整系统路径需要另行接入真实组件。
+
 新增 RAM 负载通道通过 bootloader 的 `linux,initrd-start/end` 交接只读 FAT32 卷，早期保留 payload、固件卷和 ramoops，并通过 GUID HOB 传给 `ChironRamdisk`。该路径正在验证；它不需要写 userdata 或新增磁盘分区。
 
 `ram_init_run_id` 与 `firmware_run_id` 同时填写时，独立打包任务会校验运行观察与输入哈希、创建 48 MiB RAM 卷、读回校验文件，再生成 `chiron-ram-init-experimental.img`。固件输入必须是包含新 RAM 卷驱动的构建，不能使用最初的纯探针固件。该镜像仍需独立实机验证。

@@ -31,7 +31,9 @@ def validate(post, observed):
             "native_4k_mmu_observed": True, "init_pid": 1,
             "init_heartbeats": beats, "timer_interrupts": cpu["_armcpu_timer_interrupts"],
             "real_crypto_post_and_corruption_refusal": True,
-            "source_pthread_registered": True, "user_data_written": False}
+            "source_pthread_registered": True, "user_data_written": False,
+            "apple_trust_chain_verified": False,
+            "trust_cache_runtime_enabled": False}
 
 
 def main():

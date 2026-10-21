@@ -4,7 +4,9 @@ CONFIG_XNU_SOURCE_PTHREAD=y
 CONFIG_XNU_ARM_DT_PLATFORM=y
 CONFIG_XNU_ARMCPU=y
 CONFIG_XNU_SOURCE_MOCKFS=y
-CONFIG_XNU_TRUST_CACHE_RUNTIME=y
+# Full trust-cache runtime requires the original AppleImage4/AMFI closure.
+# This source-only diagnostic does not claim the Apple trust chain.
+CONFIG_XNU_TRUST_CACHE_RUNTIME=n
 CONFIG_XNU_NATIVE_ARCH_TIMER=y
 CONFIG_XNU_NATIVE_UFS=n
 CONFIG_XNU_NATIVE_AES=n

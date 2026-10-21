@@ -28,12 +28,12 @@ def main():
     (args.tree / "build/chiron-runtime-environment.json").write_text(json.dumps({
         key: value for key, value in env.items() if key.startswith("XNU_")
     }, indent=2) + "\n")
-    # The late board guard changes an upstream patch's reverse-check context.
-    # Remove it before the upstream idempotence loop, which reapplies it last.
-    guard = args.tree / "patches/xnu/zzzz-chiron-optional-display.patch"
+    # Several late upstream patches overlap earlier contexts. Apply the full
+    # series once to a fresh pinned source tree for this distinct configuration.
     source = args.tree / ".cache/xnu-work"
-    subprocess.run(["git", "-C", str(source), "apply", "--reverse", "--check", str(guard)], check=True)
-    subprocess.run(["git", "-C", str(source), "apply", "--reverse", str(guard)], check=True)
+    old_source = args.tree / ".cache/xnu-bootstrap-source"
+    source.rename(old_source)
+    subprocess.run(["git", "clone", "--shared", str(args.tree / "refer/xnu"), str(source)], check=True)
     # Global provider flags affect many translation units; keep the bootstrap
     # objects as evidence and compile the runtime into a fresh object tree.
     objects = args.tree / "build/xnu/ios-obj"
@@ -41,6 +41,7 @@ def main():
     objects.rename(backup)
     subprocess.run(["bash", "scripts/build-xnu-4k-baseline.sh"], cwd=args.tree, env=env, check=True)
     shutil.rmtree(backup)
+    shutil.rmtree(old_source)
 
 
 if __name__ == "__main__":
