@@ -46,6 +46,11 @@ def main():
     result["kernel_sha256"] = hashlib.sha256(kernel.read_bytes()).hexdigest()
     if result["kernel_sha256"] != observed["kernel_sha256"]:
         raise ValueError("observed kernel differs from the current artifact")
+    for filename, key in (("launchd.macho", "native_user_image_sha256"), ("trustcache.bundle", "trust_cache_bundle_sha256")):
+        digest = hashlib.sha256((args.tree / "build/native-user-fixture" / filename).read_bytes()).hexdigest()
+        if digest != observed[key]:
+            raise ValueError(f"observed runtime input differs: {filename}")
+        result[filename + "_sha256"] = digest
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
 

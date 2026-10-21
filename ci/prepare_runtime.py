@@ -18,6 +18,9 @@ def main():
     parser.add_argument("--tree", required=True, type=Path)
     args = parser.parse_args()
     scripts = args.tree / "scripts"
+    replace_once(scripts / "build-corecrypto-14.py",
+                 "SOURCE = ROOT / 'refer/corecrypto-2023'",
+                 "SOURCE = (ROOT / 'refer/corecrypto-2023').resolve()")
     kernel = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
     replace_once(scripts / "build-libpthread-kernel.py",
                  "build/xnu/checkpoints/native-4k-user-abi/kernel.macho", kernel)
