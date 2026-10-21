@@ -27,6 +27,7 @@
   UefiRuntimeServicesTableLib|MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
   UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
+  HobLib|MdePkg/Library/DxeHobLib/DxeHobLib.inf
 !if $(TARGET) == RELEASE
   DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
 !else
@@ -45,3 +46,4 @@
   UniXNUPkg/Test/XnuTest/XnuTest.inf
   DarwinBootPkg/Driver/DarwinBoot.inf
   ChironCiPkg/ChironProbe.inf
+  ChironCiPkg/ChironRamdisk.inf

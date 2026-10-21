@@ -15,6 +15,7 @@ EFI_FILES = {
     "UniXNUDxe": ("DRIVER", "29B950CF-586D-49EA-9D71-F88645CCDAF6"),
     "DarwinBoot": ("DRIVER", "1B64AF87-8415-4B57-9B16-680D70913B9F"),
     "ChironProbe": ("APPLICATION", "72CC6991-82C4-4CE6-A571-599439D53E16"),
+    "ChironRamdisk": ("DRIVER", "B54E0A16-4233-4D76-95B2-D1C2CF86AF29"),
 }
 
 
@@ -83,11 +84,30 @@ def integrate(root, efi):
     ), "  // No mass-storage boot entry in this bring-up firmware.")
     text = text.replace("SimpleInitGUI", "Chiron diagnostics")
     boot.write_text(text)
+    package = Path(__file__).resolve().parents[1] / "package/ChironCiPkg"
+    memory = root / "Platforms/Msm8998FamilyPkg/MemoryInitPei"
+    shutil.copyfile(package / "ChironPayload.h", memory / "ChironPayload.h")
+    shutil.copyfile(package / "ChironReservePayload.inc", memory / "ChironReservePayload.inc")
+    source = memory / "MemoryInitPeiLib.c"
+    text = source.read_text()
+    text = replace_once(text, "STATIC\nVOID\nInitMmu", '#include "ChironReservePayload.inc"\n\nSTATIC\nVOID\nInitMmu')
+    text = replace_once(text, "  InitMmu(MemoryTable);",
+                        "  ChironReservePayload(Fdt, UefiMemoryBase, UefiMemorySize);\n  InitMmu(MemoryTable);")
+    source.write_text(text)
+    inf = memory / "MemoryInitPeiLib.inf"
+    text = inf.read_text()
+    text = replace_once(text, "  SimpleInitLib", "  SimpleInitLib\n  FdtLib\n  BaseLib\n  BaseMemoryLib")
+    text = replace_once(text, "  gArmTokenSpaceGuid.PcdSystemMemoryBase",
+                        "  gArmTokenSpaceGuid.PcdFdBaseAddress\n  gArmTokenSpaceGuid.PcdFdSize\n  gArmTokenSpaceGuid.PcdSystemMemoryBase")
+    inf.write_text(text)
     return {
         "efi_sha256": hashes, "mass_storage_app_included": False,
         "efi_source_run": os.environ.get("CHIRON_EFI_RUN"),
         "simpleinit_gui_included": False, "instruction_baseline": "armv8-a; no outline atomics",
         "hardware_boot_qualified": False,
+        "ram_payload_hob": True,
+        "ram_payload_read_only_block_io": True,
+        "firmware_and_ramoops_reserved": True,
         "limitations": ["Vendor DXE drivers are retained; no general no-write guarantee is asserted."],
     }
 

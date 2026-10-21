@@ -4,6 +4,8 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Protocol/GraphicsOutput.h>
+#include <Library/HobLib.h>
+#include "ChironPayload.h"
 
 #define READ_REGISTER(Name, Value) __asm__ volatile ("mrs %0, " #Name : "=r" (Value))
 
@@ -33,6 +35,9 @@ ChironProbeEntry (
   UINT64                        Mmfr1;
   UINT64                        Isar0;
   UINT64                        Frequency;
+  EFI_GUID                      PayloadGuid = CHIRON_PAYLOAD_GUID;
+  VOID                          *PayloadHob;
+  CHIRON_PAYLOAD                 Payload;
 
   (VOID)ImageHandle;
   (VOID)SystemTable;
@@ -53,6 +58,13 @@ ChironProbeEntry (
   Print (L"ISAR0=%016lx CNTFRQ=%lu\r\n", Isar0, Frequency);
   Print (L"TGran4(raw)=%lx TGran16(raw)=%lx\r\n",
          (Mmfr0 >> 28) & 15, (Mmfr0 >> 20) & 15);
+  PayloadHob = GetFirstGuidHob (&PayloadGuid);
+  if (PayloadHob != NULL && GET_GUID_HOB_DATA_SIZE (PayloadHob) == sizeof (Payload)) {
+    Payload = *(CHIRON_PAYLOAD *)GET_GUID_HOB_DATA (PayloadHob);
+    Print (L"RAM payload base=%016lx bytes=%lu\r\n", Payload.Base, Payload.Bytes);
+  } else {
+    Print (L"RAM payload not reserved\r\n");
+  }
 
   Status = gBS->LocateProtocol (&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&Gop);
   if (!EFI_ERROR (Status) && Gop->Mode != NULL && Gop->Mode->Info != NULL) {

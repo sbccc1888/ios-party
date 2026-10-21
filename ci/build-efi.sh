@@ -22,7 +22,7 @@ done
 make -C "$EDK_TOOLS_PATH/Source/C" -j2
 export CONF_PATH="$WORKSPACE/Conf"
 build -p ChironCiPkg/ChironCi.dsc -a AARCH64 -b DEBUG -t CLANGPDB -n 2
-for name in UniXNU UniXNUDxe DarwinBoot HelloPayload ChironProbe; do
+for name in UniXNU UniXNUDxe DarwinBoot HelloPayload ChironProbe ChironRamdisk; do
     cp "$WORKSPACE/Build/UniXNU/DEBUG_CLANGPDB/AARCH64/$name.efi" "$ROOT/dist/efi/"
 done
 python3 ci/inspect_artifacts.py "$ROOT/dist/efi"

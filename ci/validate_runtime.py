@@ -51,6 +51,13 @@ def main():
         if digest != observed[key]:
             raise ValueError(f"observed runtime input differs: {filename}")
         result[filename + "_sha256"] = digest
+    adt = args.output.parent / "kernel.macho.adt"
+    result["kernel.macho.adt_sha256"] = hashlib.sha256(adt.read_bytes()).hexdigest()
+    audit = json.loads((args.tree / "build/xnu/kernel-audit.json").read_text())
+    if audit["sha256"] != result["kernel_sha256"]:
+        raise ValueError("static architecture audit is stale")
+    result["initial_tcr"] = audit["initial_tcr"]
+    result["active_tcr"] = observed["system_registers"]["TCR_EL1"]
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
 

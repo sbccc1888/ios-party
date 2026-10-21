@@ -112,6 +112,16 @@ class BringupTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             runtime.validate(post, observed)
 
+    def test_native_ram_payload_metadata_and_bounds(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / "payload-bounds"
+            subprocess.run([
+                "cc", "-std=c99", "-Wall", "-Wextra", "-Werror",
+                "-I", str(ROOT / "package/ChironCiPkg"),
+                str(ROOT / "tests/payload_bounds.c"), "-o", str(executable),
+            ], check=True, capture_output=True)
+            subprocess.run([str(executable)], check=True)
+
     def test_reject_x64_efi_and_arm64e_kernel(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "wrong.efi"

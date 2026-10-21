@@ -18,6 +18,7 @@
   UefiApplicationEntryPoint
   UefiBootServicesTableLib
   UefiLib
+  HobLib
 
 [Protocols]
   gEfiGraphicsOutputProtocolGuid
