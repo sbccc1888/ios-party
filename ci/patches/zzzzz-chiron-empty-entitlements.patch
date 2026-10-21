@@ -1,0 +1,26 @@
+diff --git a/bsd/kern/ubc_subr.c b/bsd/kern/ubc_subr.c
+--- a/bsd/kern/ubc_subr.c
++++ b/bsd/kern/ubc_subr.c
+@@ -4353,6 +4353,22 @@
+ 	struct cs_blob *cs_blob)
+ {
+ 	kern_return_t ret = KERN_NOT_SUPPORTED;
++#if defined(BCM2837) && defined(XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS) && XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS
++	/*
++	 * The source-only diagnostic has no AMFI entitlement provider. An
++	 * actually empty entitlement set has no queries to accelerate.
++	 * Never accept an entitlement-bearing signature through this path.
++	 */
++	if (amfi == NULL) {
++		if (cs_blob->csb_entitlements == NULL &&
++		    cs_blob->csb_entitlements_blob == NULL &&
++		    cs_blob->csb_der_entitlements_blob == NULL &&
++		    ntohl(cs_blob->csb_cd->nSpecialSlots) < CSSLOT_ENTITLEMENTS) {
++			return 0;
++		}
++		return ENOTSUP;
++	}
++#endif
+ 
+ #if CODE_SIGNING_MONITOR
+ 	CEQueryContext_t ce_ctx = NULL;

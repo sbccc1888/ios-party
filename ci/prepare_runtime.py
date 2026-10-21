@@ -18,6 +18,10 @@ def main():
     parser.add_argument("--tree", required=True, type=Path)
     args = parser.parse_args()
     scripts = args.tree / "scripts"
+    replace_once(scripts / "build-xnu-4k-baseline.sh",
+                 'EXTRA_CFLAGS="$EXTRA_CFLAGS -DXNU_BOOT_PROGRESS=$BOOT_PROGRESS"',
+                 'EXTRA_CFLAGS="$EXTRA_CFLAGS -DXNU_BOOT_PROGRESS=$BOOT_PROGRESS '
+                 '-DXNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS=${XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS:-0}"')
     replace_once(scripts / "build-corecrypto-14.py",
                  "SOURCE = ROOT / 'refer/corecrypto-2023'",
                  "SOURCE = (ROOT / 'refer/corecrypto-2023').resolve()")

@@ -33,6 +33,7 @@ def validate(post, observed):
             "real_crypto_post_and_corruption_refusal": True,
             "source_pthread_registered": True, "user_data_written": False,
             "apple_trust_chain_verified": False,
+            "diagnostic_empty_entitlements_only": True,
             "trust_cache_runtime_enabled": False}
 
 

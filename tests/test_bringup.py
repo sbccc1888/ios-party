@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import struct
 import subprocess
@@ -21,6 +22,7 @@ def load(name, path):
 adt = load("chiron_adt", "scripts/make-chiron-adt.py")
 artifact = load("artifact", "ci/inspect_artifacts.py")
 runtime = load("runtime", "ci/validate_runtime.py")
+payload_builder = load("payload_builder", "ci/build_ram_payload.py")
 
 
 def read_adt(data):
@@ -119,6 +121,39 @@ class BringupTests(unittest.TestCase):
                 "cc", "-std=c99", "-Wall", "-Wextra", "-Werror",
                 "-I", str(ROOT / "package/ChironCiPkg"),
                 str(ROOT / "tests/payload_bounds.c"), "-o", str(executable),
+            ], check=True, capture_output=True)
+            subprocess.run([str(executable)], check=True)
+
+    def test_packaging_rejects_changed_runtime_artifacts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = {
+                "init_pid": 1, "init_heartbeats": 2, "native_4k_mmu_observed": True,
+                "real_crypto_post_and_corruption_refusal": True,
+                "source_pthread_registered": True, "initial_tcr": "0x200000000",
+            }
+            for filename, key in payload_builder.FILES.items():
+                data = filename.encode()
+                (root / filename).write_bytes(data)
+                report[key] = hashlib.sha256(data).hexdigest()
+            (root / "runtime-test.json").write_text(json.dumps(report))
+            self.assertEqual(payload_builder.require_runtime(root)["init_pid"], 1)
+            (root / "kernel.macho").write_bytes(b"changed after observation")
+            with self.assertRaises(ValueError):
+                payload_builder.require_runtime(root)
+
+    def test_diagnostic_guard_accepts_only_empty_entitlements(self):
+        patch = ROOT / "ci/patches/zzzzz-chiron-empty-entitlements.patch"
+        additions = "\n".join(line[1:] for line in patch.read_text().splitlines()
+                              if line.startswith("+") and not line.startswith("+++"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "guard.inc").write_text(additions + "\n")
+            executable = root / "guard-check"
+            subprocess.run([
+                "cc", "-std=c99", "-Wall", "-Wextra", "-Werror",
+                "-I", str(root), str(ROOT / "tests/empty_entitlements.c"),
+                "-o", str(executable),
             ], check=True, capture_output=True)
             subprocess.run([str(executable)], check=True)
 

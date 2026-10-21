@@ -22,6 +22,8 @@ GitHub Actions 工作流 `Chiron remote bring-up` 在源码推送时仅跑轻量
 
 源码诊断配置关闭依赖原始 AppleImage4/AMFI 的完整 trust-cache runtime；自有 init 仍进行构建时 ad-hoc 签名检查，但不声明 Apple 信任链或完整 iOS 安全模型。完整系统路径需要另行接入真实组件。
 
+仅在显式的 `XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS` 配置中，AMFI 缺失且签名不含 entitlement 上下文、XML/DER blob、entitlement special slot 时，空集合的加速操作返回成功；带 entitlement 的签名返回不支持。该诊断分支保留正常签名结构和页哈希路径，不能作为完整 AMFI 的替代品。
+
 新增 RAM 负载通道通过 bootloader 的 `linux,initrd-start/end` 交接只读 FAT32 卷，早期保留 payload、固件卷和 ramoops，并通过 GUID HOB 传给 `ChironRamdisk`。该路径正在验证；它不需要写 userdata 或新增磁盘分区。
 
 `ram_init_run_id` 与 `firmware_run_id` 同时填写时，独立打包任务会校验运行观察与输入哈希、创建 48 MiB RAM 卷、读回校验文件，再生成 `chiron-ram-init-experimental.img`。固件输入必须是包含新 RAM 卷驱动的构建，不能使用最初的纯探针固件。该镜像仍需独立实机验证。
