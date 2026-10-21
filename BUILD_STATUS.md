@@ -76,3 +76,9 @@ Finished. Total time: 0.040s
 之后 fastboot 设备列表为空。随后用户报告成功进入 UEFI，并提供了探针照片：可见 EL1 寄存器输出和等待按键，确认 ChironProbe 已执行。启动 CPU 的 TGran4=0、TGran16=0；GOP 为 1080×2160、pitch=1080、base=`0x9d400000`。详细转录见 [UEFI 探针观察](research/CHIRON_UEFI_PROBE.zh-CN.md)。
 
 仍未确认 XNU 运行。未执行分区刷写或擦除命令。原始命令输出位于 `research/artifacts/chiron-firstboot-20261020/fastboot-boot.log`。
+
+## 后续 RAM init
+
+后续已在 Cortex-A53 QEMU 观察到真实 PID 1、4096 字节页大小、两次 init 心跳和 28 次定时器中断；源密码学 POST 正反例、平台/CPU/pthread 初始化均通过。运行编号 `39539539318`。
+
+整合打包 `39540284319` 已通过，输出 `dist/ram-boot/chiron-ram-init-experimental.img`，约 49.5 MiB。它包含内核、ADT 和自有最小 RAM init，不是完整 iOS 用户态。当前没有这版内核的实机运行证据，见 [RAM init 状态](RUNTIME_STATUS.md)。

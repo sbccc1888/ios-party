@@ -4,6 +4,8 @@
 
 当前已完成远程编译和首次 UEFI/只读探针实机运行。探针确认启动 CPU 支持 4 KiB、不支持 16 KiB，继续采用 4 KiB 路线。尚未证明 XNU 在 MIX 2 上启动，也没有生成完整 iOS 用户态或可日常使用的系统。照片转录见 [UEFI 探针记录](research/CHIRON_UEFI_PROBE.zh-CN.md)。
 
+后续已在 Cortex-A53 QEMU 中观察到自有 PID 1、4 KiB ABI 和两次真实心跳，并生成带只读 RAM 卷的实验镜像；实机尚待验证，见 [RAM init 记录](RUNTIME_STATUS.md)。
+
 首轮内核、驱动库、EFI 和整合固件的远程编译均已通过。成品位置、哈希和验证边界见 [构建记录](BUILD_STATUS.md)。
 
 ## 构建方式
