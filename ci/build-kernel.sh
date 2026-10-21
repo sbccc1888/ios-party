@@ -12,6 +12,8 @@ python3 "$UPSTREAM/unixnu" defconfig chiron_defconfig -D "$ROOT" --out "$OUT"
 python3 "$UPSTREAM/unixnu" fetch xnu libplatform libdispatch AvailabilityVersions -D "$ROOT" --out "$OUT"
 python3 "$UPSTREAM/unixnu" tree -D "$ROOT" --out "$OUT"
 TREE="$OUT/chiron/tree"
+python3 "$ROOT/ci/cache_public_headers.py" --upstream "$UPSTREAM" --cache "$TREE/.cache/sources"
+unset GH_TOKEN
 mkdir -p "$ROOT/dist/kernel"
 export JOBS=3
 # Source compilation only: deliberately do not call the IPSW/prelink step.
