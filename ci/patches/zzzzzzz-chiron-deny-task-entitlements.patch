@@ -1,0 +1,39 @@
+diff --git a/iokit/bsddev/IOKitBSDInit.cpp b/iokit/bsddev/IOKitBSDInit.cpp
+--- a/iokit/bsddev/IOKitBSDInit.cpp
++++ b/iokit/bsddev/IOKitBSDInit.cpp
+@@ -1502,6 +1502,11 @@
+ IOTaskHasStringEntitlement(task_t task, const char *entitlement, const char *value)
+ {
++#if defined(BCM2837) && defined(XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS) && XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS
++	if (amfi == NULL) {
++		return false;
++	}
++#endif
+ 	if (task == NULL) {
+ 		task = current_task();
+ 	}
+ 
+@@ -1534,6 +1539,11 @@
+ IOTaskHasEntitlement(task_t task, const char *entitlement)
+ {
++#if defined(BCM2837) && defined(XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS) && XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS
++	if (amfi == NULL) {
++		return false;
++	}
++#endif
+ 	if (task == NULL) {
+ 		task = current_task();
+ 	}
+ 
+@@ -1564,6 +1574,11 @@
+ IOTaskGetEntitlement(task_t task, const char *entitlement)
+ {
+ 	void *entitlement_object = NULL;
+ 	char *return_value = NULL;
++#if defined(BCM2837) && defined(XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS) && XNU_DIAGNOSTIC_EMPTY_ENTITLEMENTS
++	if (amfi == NULL) {
++		return NULL;
++	}
++#endif
+ 
+ 	if (task == NULL) {
