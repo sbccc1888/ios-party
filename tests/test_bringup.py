@@ -20,6 +20,7 @@ def load(name, path):
 
 adt = load("chiron_adt", "scripts/make-chiron-adt.py")
 artifact = load("artifact", "ci/inspect_artifacts.py")
+runtime = load("runtime", "ci/validate_runtime.py")
 
 
 def read_adt(data):
@@ -83,6 +84,33 @@ class BringupTests(unittest.TestCase):
         self.profile["soc_revision"] = "unknown"
         with self.assertRaises(ValueError):
             adt.generate(self.board, self.profile, bytes(64))
+
+    def test_ram_root_bindings_are_loader_owned_and_empty(self):
+        tree = read_adt(adt.generate(self.board, self.profile, bytes(64), ram_root=True))
+        memory = tree["/device-tree/chosen/memory-map"]
+        self.assertEqual(memory["RAMDisk"], bytes(16))
+        self.assertEqual(memory["TrustCache"], bytes(16))
+
+    def test_runtime_requires_matching_real_checkpoints(self):
+        post = {"kernel_sha256": "a" * 64,
+                "default_provider_post_and_registration_passed": True, "corrupted_hmac_refused": True}
+        observed = {
+            "kernel_sha256": "a" * 64, "native_4k_mmu_observed": True,
+            "native_user_el0_observed": True, "native_user_4k_abi_observed": True,
+            "native_user_memory": {"_chiron_heartbeats": struct.pack("<Q", 2).hex(),
+                                   "_chiron_init_status": struct.pack("<Q", 2).hex()},
+            "armcpu_globals": {"_armcpu_registered": 1, "_armcpu_gic_ready": 1,
+                              "_armcpu_timer_interrupts": 3},
+            "pthread_globals": {"_source_pthread_status": 0, "_pthread_functions": 1},
+        }
+        self.assertFalse(runtime.validate(post, observed)["hardware_boot_qualified"])
+        observed["kernel_sha256"] = "b" * 64
+        with self.assertRaises(ValueError):
+            runtime.validate(post, observed)
+        observed["kernel_sha256"] = "a" * 64
+        observed["native_user_memory"]["_chiron_heartbeats"] = bytes(8).hex()
+        with self.assertRaises(ValueError):
+            runtime.validate(post, observed)
 
     def test_reject_x64_efi_and_arm64e_kernel(self):
         with tempfile.TemporaryDirectory() as directory:

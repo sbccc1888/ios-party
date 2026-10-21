@@ -55,7 +55,7 @@ def nvram_proxy():
     ]
 
 
-def generate(board, profile, seed):
+def generate(board, profile, seed, ram_root=False):
     spec = board["bringup"]
     if profile["device"] != "chiron" or profile["soc_revision"] != "2.1":
         raise ValueError("unqualified device profile")
@@ -96,7 +96,7 @@ def generate(board, profile, seed):
             ("dram-size", u64(sum(bank["size"] for bank in banks))),
             ("darwinboot-memory-size", u64(allocation_size)),
             *nvram_proxy(),
-        ], [node("memory-map")]),
+        ], [node("memory-map", [("RAMDisk", bytes(16)), ("TrustCache", bytes(16))] if ram_root else [])]),
         node("cpus", children=[cpu]),
         node("psci", [("compatible", b"arm,psci-1.0\0"), ("method", b"smc\0")]),
         node("defaults"),
@@ -114,10 +114,11 @@ def main():
     parser.add_argument("--board", type=Path, default=ROOT / "board.toml")
     parser.add_argument("--profile", type=Path, default=ROOT / "research/chiron-live-profile.json")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--ram-root", action="store_true", help="Reserve loader-patched RAMDisk and owned trust-cache bindings")
     args = parser.parse_args()
     board = tomllib.loads(args.board.read_text())
     profile = json.loads(args.profile.read_text())
-    data = generate(board, profile, os.urandom(64))
+    data = generate(board, profile, os.urandom(64), args.ram_root)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(data)
     report = {
@@ -125,6 +126,7 @@ def main():
         "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data),
         "hardware_boot_qualified": False,
         "storage_nodes_included": False, "apple_identity_included": False,
+        "ram_root_requested": args.ram_root,
         "memory_policy": "DarwinBoot must allocate from its actual UEFI free-memory map.",
     }
     args.output.with_suffix(".json").write_text(json.dumps(report, indent=2) + "\n")

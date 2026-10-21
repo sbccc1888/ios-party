@@ -18,6 +18,8 @@ GitHub Actions 工作流 `Chiron remote bring-up` 在源码推送时仅跑轻量
 
 固件集成重跑可填写 `efi_run_id`，复用同仓库此前成功生成的 `chiron-efi` 产物；该情况下跳过 EFI 重编译。更新 EFI 源码后应留空，重新编译。
 
+`kernel_mode=ram-init` 增加源密码学、pthread、平台/CPU 与 mockfs 链接，并运行 QEMU POST 正反例和自有 PID 1 心跳测试。该模式需填写可用的 `efi_run_id`；其通过标准是 `runtime-test.json` 的真实运行观察，不能以编译成功代替。源密码学使用上游固定的第三方评价快照，来源信息保留在 `ci/sources.json` 和构建报告中，不声明厂商认证。
+
 本地验证：
 
 ```sh

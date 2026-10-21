@@ -13,7 +13,7 @@ def git(path, *arguments):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("names", nargs="+", choices=("unixnu", "mu", "uefi"))
+    parser.add_argument("names", nargs="+", choices=("unixnu", "mu", "uefi", "corecrypto", "libpthread"))
     parser.add_argument("--root", type=Path, required=True)
     args = parser.parse_args()
     sources = json.loads((Path(__file__).with_name("sources.json")).read_text())
