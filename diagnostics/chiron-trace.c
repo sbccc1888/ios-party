@@ -11,6 +11,8 @@ static unsigned trace_busy, trace_ready;
 static uint64_t trace_irqs;
 static uint64_t trace_painted, trace_painted_base;
 static unsigned trace_x, trace_y, trace_repaint, trace_painted_fault;
+static uint64_t trace_panic_start;
+static unsigned trace_panic_start_valid;
 
 extern int vsnprintf(char *, size_t, const char *, va_list);
 
@@ -216,6 +218,9 @@ static void trace_draw(void) {
         int reset = trace_repaint || trace_painted_base != base || trace_painted > total ||
                     total - trace_painted > log->text_used || trace_painted_fault != log->fault_valid;
         unsigned count = reset ? log->text_used : (unsigned)(total - trace_painted);
+        if (reset && trace_panic_start_valid && trace_panic_start <= total &&
+            total - trace_panic_start < count)
+            count = (unsigned)(total - trace_panic_start);
         /* A bounded last page is enough for display; the full ring remains exportable. */
         if (reset && count > cols * (rows - 1)) count = cols * (rows - 1);
         unsigned start = (log->text_write + CT_TEXT_BYTES - count) % CT_TEXT_BYTES;
@@ -470,6 +475,8 @@ void chiron_trace_panic(const char *format, va_list *arguments, unsigned long ca
     if (trace_busy) { ++chiron_trace_log.reentries; trace_restore(flags); return; }
     trace_busy = 1;
     trace_header();
+    trace_panic_start = (uint64_t)chiron_trace_log.text_dropped + chiron_trace_log.text_used;
+    trace_panic_start_valid = 1;
     trace_text("\nPANIC CALLER "); trace_hex(caller); trace_char('\n');
     char message[512];
     va_list copy;
