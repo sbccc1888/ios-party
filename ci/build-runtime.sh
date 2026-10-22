@@ -34,3 +34,17 @@ cp "$TREE/build/native-user-fixture/trustcache.bundle" "$RUNTIME/"
 cp "$TREE/build/native-user-fixture/addresses.json" "$RUNTIME/"
 cp "$TREE/build/corecrypto-2023/build-report-namespaced.json" "$RUNTIME/crypto-build-report.json"
 python3 "$ROOT/scripts/make-chiron-adt.py" --ram-root --output "$RUNTIME/kernel.macho.adt"
+if [ "${CHIRON_KERNEL_MODE:-}" = ram-trace ]; then
+    cp "$TREE/build/boot-progress/source-trace-build.json" "$RUNTIME/"
+    cp "$TREE/build/chiron-source-overlay.json" "$RUNTIME/"
+    cp "$TREE/build/chiron-runtime-environment.json" "$RUNTIME/"
+    cp "$TREE/build/chiron-recipe-overlays.json" "$RUNTIME/"
+    xcrun nm -n "$KERNEL" > "$RUNTIME/kernel-symbols.txt"
+    xcrun dsymutil "$KERNEL" -o "$RUNTIME/kernel.dSYM"
+    mkdir -p "$RUNTIME/observer-source"
+    cp -R "$TREE/diagnostics" "$RUNTIME/observer-source/"
+    for file in osfmk/arm64/start.s osfmk/arm/arm_init.c osfmk/arm64/arm_vm_init.c osfmk/arm64/sleh.c osfmk/kern/debug.c osfmk/kern/startup.c; do
+        mkdir -p "$RUNTIME/observer-source/$(dirname "$file")"
+        cp "$TREE/.cache/xnu-work/$file" "$RUNTIME/observer-source/$file"
+    done
+fi

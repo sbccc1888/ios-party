@@ -68,7 +68,11 @@ def main():
     for source, target in mapping.items():
         subprocess.run(["mcopy", "-i", str(image), str(args.runtime / source),
                         "::/EFI/UniXNU/Payloads/" + target], check=True)
-    config = '''version = 1
+    title = "Chiron native 4K XNU / RAM init"
+    trace_build = args.runtime / "source-trace-build.json"
+    if trace_build.exists():
+        title = json.loads(trace_build.read_text())["build_id"]
+    config = f'''version = 1
 [boot]
 timeout = 5
 default = "chiron-ram-init"
@@ -76,7 +80,7 @@ default = "chiron-ram-init"
 autoload = false
 [[entry]]
 id = "chiron-ram-init"
-title = "Chiron native 4K XNU / RAM init"
+title = {json.dumps(title)}
 type = "xnu"
 path = "Payloads/kernel.macho"
 initrd = "Payloads/launchd.macho"

@@ -2,9 +2,11 @@
 
 基于 UniXNU 与 MSM8998 EDK2 的设备移植工程。目标设备为小米 MIX 2 6 GB / 128 GB，实测 SoC 修订 2.1、Synaptics 触控、JDI video 面板。
 
-当前已完成远程编译和首次 UEFI/只读探针实机运行。探针确认启动 CPU 支持 4 KiB、不支持 16 KiB，继续采用 4 KiB 路线。尚未证明 XNU 在 MIX 2 上启动，也没有生成完整 iOS 用户态或可日常使用的系统。照片转录见 [UEFI 探针记录](research/CHIRON_UEFI_PROBE.zh-CN.md)。
+当前已完成远程编译和 UEFI/只读探针实机运行。探针确认启动 CPU 支持 4 KiB、不支持 16 KiB，继续采用 4 KiB 路线。尚未完成 XNU 实机最小运行验证，也没有生成完整 iOS 用户态或可日常使用的系统。照片转录见 [UEFI 探针记录](research/CHIRON_UEFI_PROBE.zh-CN.md)。
 
-后续已在 Cortex-A53 QEMU 中观察到自有 PID 1、4 KiB ABI 和两次真实心跳，并生成带只读 RAM 卷的实验镜像；实机尚待验证，见 [RAM init 记录](RUNTIME_STATUS.md)。
+后续已在 Cortex-A53 QEMU 中观察到自有 PID 1、4 KiB ABI 和两次真实心跳。2026-10-22，实机诊断照片已显示 `17`，确认诊断内核中的原始 `arm_vm_init` 返回。尚无实机 PID 1 或完整 iOS 用户态的证据，也尚未取得明确故障原因；最后一条可见标记不等于故障位置。
+
+后续主线改为固定源码基线上的统一日志：入口与内存初始化记录、持续内核文本、EL1 异常 PC/ESR/FAR 和 panic 原因先进入版本化内存记录，再输出到屏幕。云端 `ram-trace` 模式统一编译、验证、编号和打包，不再对编译后的 XNU 追加指令补丁。当前源码和本地测试已接入，云端运行与实机结果需分别记录，见 [源码可观测性](research/CHIRON_SOURCE_TRACE.zh-CN.md)。以前的本地插桩工具保留为历史诊断资料。
 
 首轮内核、驱动库、EFI 和整合固件的远程编译均已通过。成品位置、哈希和验证边界见 [构建记录](BUILD_STATUS.md)。
 

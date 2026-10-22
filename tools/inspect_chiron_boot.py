@@ -150,14 +150,24 @@ def inspect(source, output):
         position = align(position + size, page)
     if position > len(data):
         raise ValueError("truncated payload alignment padding")
-    if payloads["kernel"][:2] != b"\x1f\x8b":
-        raise ValueError("expected gzip kernel")
-    decompressor = zlib.decompressobj(31)
-    kernel = decompressor.decompress(payloads["kernel"], 256 * 1024 * 1024)
-    if not decompressor.eof:
-        raise ValueError("kernel exceeds limit or has an incomplete gzip stream")
-    suffix = decompressor.unused_data
-    gzip_size = len(payloads["kernel"]) - len(suffix)
+    encoded = payloads["kernel"]
+    gzip_size = None
+    if encoded[:2] == b"\x1f\x8b":
+        decompressor = zlib.decompressobj(31)
+        kernel = decompressor.decompress(encoded, 256 * 1024 * 1024)
+        if not decompressor.eof:
+            raise ValueError("kernel exceeds limit or has an incomplete gzip stream")
+        suffix = decompressor.unused_data
+        suffix_offset = gzip_size = len(encoded) - len(suffix)
+        compression = "gzip"
+    elif len(encoded) >= 64 and encoded[56:60] == b"ARM\x64":
+        suffix_offset = struct.unpack_from("<Q", encoded, 16)[0]
+        if suffix_offset < 64 or suffix_offset > min(len(encoded), 256 * 1024 * 1024):
+            raise ValueError("invalid ARM64 Image size for uncompressed kernel")
+        kernel, suffix = encoded[:suffix_offset], encoded[suffix_offset:]
+        compression = "none"
+    else:
+        raise ValueError("expected gzip kernel or sized uncompressed ARM64 Image")
     banner = re.search(rb"Linux version [^\0\r\n]{1,1024}", kernel)
     arm_header = None
     if len(kernel) >= 64 and kernel[56:60] == b"ARM\x64":
@@ -189,7 +199,7 @@ def inspect(source, output):
         filename = f"dtb-{len(dtbs):02d}.dtb"
         dtbs.append({
             "file": filename,
-            "boot_image_offset": page + gzip_size + cursor,
+            "boot_image_offset": page + suffix_offset + cursor,
             "size": size,
             "sha256": sha256(blob),
             "node_count": len(nodes),
@@ -222,6 +232,8 @@ def inspect(source, output):
         "trailing_bytes": len(data) - position,
         "trailing_sha256": sha256(data[position:]),
         "kernel_gzip_bytes": gzip_size,
+        "kernel_compression": compression,
+        "kernel_image_sha256": sha256(kernel),
         "kernel_decompressed_bytes": len(kernel),
         "kernel_banner": banner.group().decode("ascii", "replace") if banner else None,
         "arm64_image_header": arm_header,

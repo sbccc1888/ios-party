@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "device": "chiron",
+  "baseline_repository_commit": "10c25373826067b54b31f03016e2144226b7e06f",
+  "unixnu_commit": "7b52e7968c76453cdc18b5aa174fc368d5293b91",
+  "xnu_commit": "d8b80295118ef25ac3a784134bcf95cd8e88109f",
+  "efi_run_id": "39417919101",
+  "firmware_run_id": "39532407683",
+  "qualified_ram_init_run_id": "39539539318",
+  "source_kernel_sha256": "812eb05da0c93556674489ba706868fc2b5208fd66b4a74cd27f282cb4f34de2",
+  "transport_firmware_sha256": "d264707aad247c2be824970bbb802a2c58dc8463d8a602b5a113abda75374963",
+  "hardware_observation": {
+    "image": "IMG_20261022_093457.jpg",
+    "stage": "17",
+    "meaning": "original arm_vm_init returned in the diagnostic kernel",
+    "photo_independently_confirms_image_hash": false,
+    "hardware_pid1_observed": false,
+    "failure_cause_identified": false
+  },
+  "policy": {
+    "new_kernel_instrumentation": "source overlay before compilation",
+    "archived_binary_kernel_probes": "historical baseline only",
+    "transport_changes": "fixed source-assembled zero-tail transport, with frozen firmware body",
+    "cpu_count": 1,
+    "page_bytes": 4096
+  }
+}

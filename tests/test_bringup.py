@@ -1,4 +1,5 @@
 import importlib.util
+import gzip
 import hashlib
 import json
 import struct
@@ -23,6 +24,7 @@ adt = load("chiron_adt", "scripts/make-chiron-adt.py")
 artifact = load("artifact", "ci/inspect_artifacts.py")
 runtime = load("runtime", "ci/validate_runtime.py")
 payload_builder = load("payload_builder", "ci/build_ram_payload.py")
+boot_inspector = load("boot_inspector", "tools/inspect_chiron_boot.py")
 
 
 def read_adt(data):
@@ -197,5 +199,111 @@ class BringupTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn(b"does not cover", result.stderr)
             self.assertFalse((output / "chiron-uefi-experimental.img").exists())
+
+    def test_firmware_control_preserves_kernel_bytes_and_rejects_bad_checksum(self):
+        # A minimal FDT plus an intentionally distinctive gzip header exercises
+        # exact preservation across Python/zlib versions.
+        tree = struct.pack(">I", 1) + bytes(4) + struct.pack(">II", 2, 9)
+        dtb = struct.pack(">10I", 0xD00DFEED, 72, 56, 72, 40, 17, 16, 0, 0, len(tree))
+        dtb += bytes(16) + tree
+        compressed = bytearray(gzip.compress(bytes(64), mtime=0))
+        compressed[9] = 3
+        kernel = bytes(compressed) + dtb
+        ramdisk = bytes(range(256)) * 32
+        header = bytearray(4096)
+        header[:8] = b"ANDROID!"
+        struct.pack_into("<10I", header, 8, len(kernel), 0x8000, len(ramdisk),
+                         0x1000000, 0, 0, 0x100, 4096, 0, 0)
+        digest = hashlib.sha1()
+        for payload in (kernel, ramdisk, b""):
+            digest.update(payload)
+            digest.update(struct.pack("<I", len(payload)))
+        header[576:608] = digest.digest().ljust(32, b"\0")
+        original = bytes(header) + kernel + bytes(-len(kernel) % 4096) + ramdisk
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "input.img"
+            source.write_bytes(original)
+            command = [sys.executable, str(ROOT / "tools/make_chiron_firmware_control.py"),
+                       "--source", str(source), "--output", str(root / "control")]
+            subprocess.run(command, check=True, capture_output=True)
+            result = (root / "control/chiron-same-firmware-no-ram.img").read_bytes()
+            self.assertEqual(result[4096:4096 + len(kernel)], kernel)
+            self.assertEqual(struct.unpack_from("<I", result, 16)[0], 0)
+            self.assertEqual(len(result), len(original) - len(ramdisk))
+            self.assertEqual(source.read_bytes(), original)
+            legacy_firmware = bytearray(0x600000)
+            legacy_firmware[56:60] = b"ARM\x64"
+            struct.pack_into("<Q", legacy_firmware, 16, len(legacy_firmware))
+            legacy_kernel = gzip.compress(legacy_firmware, mtime=0) + dtb
+            legacy_header = bytearray(result[:4096])
+            struct.pack_into("<I", legacy_header, 8, len(legacy_kernel))
+            legacy_digest = hashlib.sha1()
+            for payload in (legacy_kernel, b"", b""):
+                legacy_digest.update(payload)
+                legacy_digest.update(struct.pack("<I", len(payload)))
+            legacy_header[576:608] = legacy_digest.digest().ljust(32, b"\0")
+            legacy = root / "legacy.img"
+            legacy.write_bytes(bytes(legacy_header) + legacy_kernel
+                               + bytes(-len(legacy_kernel) % 4096))
+            legacy_command = command[:-1] + [
+                str(root / "legacy-control"), "--firmware-source", str(legacy),
+            ]
+            subprocess.run(legacy_command, check=True, capture_output=True)
+            combined = (root / "legacy-control/chiron-legacy-firmware-same-ram.img").read_bytes()
+            self.assertEqual(combined[4096:4096 + len(legacy_kernel)], legacy_kernel)
+            self.assertEqual(struct.unpack_from("<I", combined, 16)[0], len(ramdisk))
+            ramdisk_offset = (4096 + len(legacy_kernel) + 4095) // 4096 * 4096
+            self.assertEqual(combined[ramdisk_offset:], ramdisk)
+            prefix_command = legacy_command + ["--ramdisk-prefix-bytes", "4096"]
+            prefix_command[5] = str(root / "prefix-control")
+            subprocess.run(prefix_command, check=True, capture_output=True)
+            prefix = (root / "prefix-control/chiron-legacy-ram-4k.img").read_bytes()
+            self.assertEqual(prefix[4096:4096 + len(legacy_kernel)], legacy_kernel)
+            self.assertEqual(struct.unpack_from("<I", prefix, 16)[0], 4096)
+            self.assertEqual(prefix[ramdisk_offset:], ramdisk[:4096])
+            prefix_command[5] = str(root / "invalid-prefix")
+            prefix_command[-1] = "4097"
+            invalid_prefix = subprocess.run(prefix_command, capture_output=True)
+            self.assertNotEqual(invalid_prefix.returncode, 0)
+            self.assertIn(b"RAM prefix must be page aligned", invalid_prefix.stderr)
+            self.assertFalse((root / "invalid-prefix").exists())
+            no_legacy = command + ["--ramdisk-prefix-bytes", "4096"]
+            no_legacy[5] = str(root / "no-legacy")
+            rejected_prefix = subprocess.run(no_legacy, capture_output=True)
+            self.assertNotEqual(rejected_prefix.returncode, 0)
+            self.assertIn(b"require legacy firmware", rejected_prefix.stderr)
+            raw_command = legacy_command + ["--uncompressed-firmware"]
+            raw_command[5] = str(root / "raw-control")
+            subprocess.run(raw_command, check=True, capture_output=True)
+            raw = (root / "raw-control/chiron-legacy-raw-firmware-same-ram.img").read_bytes()
+            self.assertEqual(raw[4096:4096 + len(legacy_firmware)], legacy_firmware)
+            self.assertEqual(raw[4096 + len(legacy_firmware):4096 + len(legacy_firmware) + len(dtb)], dtb)
+            raw_ramdisk_offset = (4096 + len(legacy_firmware) + len(dtb) + 4095) // 4096 * 4096
+            self.assertEqual(raw[raw_ramdisk_offset:], ramdisk)
+            raw_report = json.loads((root / "raw-control/control-report.json").read_text())
+            self.assertEqual(raw_report["kernel_compression"], "none")
+            self.assertEqual(raw_report["firmware_content_sha256"], hashlib.sha256(legacy_firmware).hexdigest())
+            malformed = bytearray(raw)
+            struct.pack_into("<Q", malformed, 4096 + 16, len(raw) * 2)
+            malformed_path = root / "malformed.img"
+            malformed_path.write_bytes(malformed)
+            with self.assertRaisesRegex(ValueError, "invalid ARM64 Image size"):
+                boot_inspector.inspect(malformed_path, root / "malformed-inspection")
+            incompatible = bytearray(legacy.read_bytes())
+            struct.pack_into("<I", incompatible, 20, 0x2000000)
+            legacy.write_bytes(incompatible)
+            legacy_command[5] = str(root / "incompatible")
+            rejected_legacy = subprocess.run(legacy_command, capture_output=True)
+            self.assertNotEqual(rejected_legacy.returncode, 0)
+            self.assertIn(b"incompatible ramdisk_addr", rejected_legacy.stderr)
+            self.assertFalse((root / "incompatible").exists())
+            source.write_bytes(original[:576] + bytes(32) + original[608:])
+            command[-1] = str(root / "rejected")
+            rejected = subprocess.run(command, capture_output=True)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn(b"integrity check failed", rejected.stderr)
+            self.assertFalse((root / "rejected").exists())
+
 if __name__ == "__main__":
     unittest.main()

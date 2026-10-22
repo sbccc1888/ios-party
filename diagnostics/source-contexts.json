@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "unixnu_commit": "7b52e7968c76453cdc18b5aa174fc368d5293b91",
+  "xnu_commit": "d8b80295118ef25ac3a784134bcf95cd8e88109f",
+  "after_pinned_upstream_patches": {
+    "osfmk/arm64/start.s": "bf9864bfa4afbc56e31040a445fd078f08be7f702321e146e356d960719022e3",
+    "osfmk/arm/arm_init.c": "46dabcb3fa33b61787fbadf46a8438aa9cd1109428a0294cb0c734997238feb8",
+    "osfmk/arm64/arm_vm_init.c": "372d0449a312dc4391aa1e6b5adee35dd2a87b4c7beb0000954a3d84808493e3",
+    "osfmk/arm64/sleh.c": "10638ba610f21870182dd4b9ff6f5503fc320de5073bf7c1cfbef64b0a4c124a",
+    "osfmk/kern/debug.c": "03300886ebf0ccf6159756491ae6af0e7cef031df70e15c9de71d8aea8ff42a5",
+    "osfmk/kern/startup.c": "5022d12d5947893668ad444dd1cf5afad24cdb65cf5ba090beb8e9e8983cf3b4"
+  }
+}

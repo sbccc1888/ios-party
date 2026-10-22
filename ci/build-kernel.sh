@@ -32,7 +32,7 @@ python3 "$ROOT/ci/build_driver_archives.py" --tree "$TREE" --output "$ROOT/dist/
 python3 "$ROOT/scripts/make-chiron-adt.py" --output "$ROOT/dist/kernel/kernel.source.adt"
 cp ci/sources.json board.toml configs/chiron_defconfig "$ROOT/dist/kernel/"
 python3 ci/inspect_artifacts.py "$ROOT/dist/kernel"
-if [ "${CHIRON_KERNEL_MODE:-bootstrap}" = ram-init ]; then
+if [ "${CHIRON_KERNEL_MODE:-bootstrap}" = ram-init ] || [ "${CHIRON_KERNEL_MODE:-bootstrap}" = ram-trace ]; then
     RUNTIME_EXIT=0
     bash "$ROOT/ci/build-runtime.sh" "$TREE" > "$ROOT/dist/kernel/runtime-build.log" 2>&1 || RUNTIME_EXIT=$?
     if [ "$RUNTIME_EXIT" -ne 0 ]; then

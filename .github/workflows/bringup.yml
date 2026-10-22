@@ -21,7 +21,7 @@ on:
       kernel_mode:
         description: Source bootstrap or full RAM-init runtime with QEMU verification
         type: choice
-        options: [bootstrap, ram-init]
+        options: [bootstrap, ram-init, ram-trace]
         default: bootstrap
       build_firmware:
         description: Compile the UEFI manager, DarwinBoot and chiron firmware
@@ -142,12 +142,12 @@ jobs:
           command -v cmake
           command -v ninja
           command -v unifdef || brew install unifdef
-          if [ "$CHIRON_KERNEL_MODE" = ram-init ]; then
+          if [ "$CHIRON_KERNEL_MODE" = ram-init ] || [ "$CHIRON_KERNEL_MODE" = ram-trace ]; then
             test -n "$CHIRON_EFI_RUN"
             command -v qemu-system-aarch64 || brew install qemu
           fi
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        if: inputs.kernel_mode == 'ram-init'
+        if: inputs.kernel_mode == 'ram-init' || inputs.kernel_mode == 'ram-trace'
         with:
           name: chiron-efi
           path: dist/efi
@@ -163,10 +163,48 @@ jobs:
           path: dist/kernel/
           retention-days: 7
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always() && inputs.kernel_mode == 'ram-init'
+        if: always() && (inputs.kernel_mode == 'ram-init' || inputs.kernel_mode == 'ram-trace')
         with:
           name: chiron-ram-init
           path: dist/ram-init/
+          retention-days: 7
+
+  source-trace-image:
+    if: inputs.kernel_mode == 'ram-trace'
+    needs: kernel
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    env:
+      CHIRON_EFI_RUN: ${{ inputs.efi_run_id }}
+      CHIRON_FIRMWARE_RUN: ${{ inputs.firmware_run_id || '39532407683' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-ram-init
+          path: dist/source-runtime
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-firmware
+          path: dist/source-firmware
+          github-token: ${{ github.token }}
+          run-id: ${{ env.CHIRON_FIRMWARE_RUN }}
+      - run: sudo apt-get update && sudo apt-get install -y clang mtools dosfstools
+      - run: python3 ci/package_source_trace.py --runtime dist/source-runtime --firmware dist/source-firmware --output dist/source-trace
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chiron-source-trace-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            dist/source-trace/*.img
+            dist/source-trace/*.json
+            dist/source-trace/kernel-symbols.txt
+            dist/source-trace/qemu-logs/
+            dist/source-trace/kernel.dSYM/
+            dist/source-trace/observer-source/
+          if-no-files-found: error
           retention-days: 7
 
   ram-boot:

@@ -18,7 +18,9 @@ def main():
     import sys
     sys.path.insert(0, str(Path(os.environ["RUNNER_TEMP"]) / "chiron-sources/unixnu/scripts"))
     from unixnu.config import parse_config
-    config = parse_config((root / "configs/chiron_raminit_defconfig").read_text())
+    config_file = ("chiron_trace_defconfig" if os.environ.get("CHIRON_KERNEL_MODE") == "ram-trace"
+                   else "chiron_raminit_defconfig")
+    config = parse_config((root / "configs" / config_file).read_text())
     env = dict(os.environ)
     for key, value in config.items():
         if not key.startswith("XNU_"):

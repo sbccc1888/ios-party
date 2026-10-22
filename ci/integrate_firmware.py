@@ -25,6 +25,22 @@ def replace_once(text, old, new):
     return text.replace(old, new, 1)
 
 
+def defer_fdt_store(text):
+    store = (
+        "  mov x10, FixedPcdGet64 (PcdDeviceTreeStore)\n"
+        "  str x0, [x10] // oh my fdt\n"
+    )
+    text = replace_once(text, store, "")
+    return replace_once(
+        text, "  b.ne\tloop\n  ret\n",
+        "  b.ne\tloop\n"
+        "  // The fixed store may overlap the source FD; save only after copying.\n"
+        "  mov x10, FixedPcdGet64 (PcdDeviceTreeStore)\n"
+        "  str x0, [x10]\n"
+        "  ret\n",
+    )
+
+
 def integrate(root, efi):
     destination = root / "ChironPrebuilt"
     destination.mkdir(exist_ok=False)
@@ -84,6 +100,8 @@ def integrate(root, efi):
     ), "  // No mass-storage boot entry in this bring-up firmware.")
     text = text.replace("SimpleInitGUI", "Chiron diagnostics")
     boot.write_text(text)
+    helper = root / "Platforms/Msm8998FamilyPkg/Library/ArmPlatformLib/AArch64/ArmPlatformHelper.S"
+    helper.write_text(defer_fdt_store(helper.read_text()))
     package = Path(__file__).resolve().parents[1] / "package/ChironCiPkg"
     memory = root / "Platforms/Msm8998FamilyPkg/MemoryInitPei"
     shutil.copyfile(package / "ChironPayload.h", memory / "ChironPayload.h")
@@ -108,6 +126,7 @@ def integrate(root, efi):
         "ram_payload_hob": True,
         "ram_payload_read_only_block_io": True,
         "firmware_and_ramoops_reserved": True,
+        "fdt_store_after_firmware_copy": True,
         "limitations": ["Vendor DXE drivers are retained; no general no-write guarantee is asserted."],
     }
 
