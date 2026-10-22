@@ -59,6 +59,8 @@ def main():
     }
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     shutil.copytree(args.runtime / "source-trace-tests", args.output / "qemu-logs")
+    shutil.copyfile(args.runtime / "chiron-trace.bin", args.output / "qemu-logs/normal.bin")
+    shutil.copytree(args.runtime / "source-trace-captures", args.output / "qemu-logs/preflight-captures")
     shutil.copytree(args.runtime / "kernel.dSYM", args.output / "kernel.dSYM")
     shutil.copytree(args.runtime / "observer-source", args.output / "observer-source")
     print(json.dumps({"image": name, "sha256": manifest["image_sha256"]}, indent=2))

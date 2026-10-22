@@ -16,11 +16,22 @@ TEST_EXIT=0
         --native-user --trust-cache build/native-user-fixture/trustcache.bundle \
         --check-commpage --qemu-ramfb --capture-qemu-screen
 ) || TEST_EXIT=$?
-for name in gdb-stop.json gdb-failure.json gdb-uart.log gdb-stderr.log; do
+for name in gdb-stop.json gdb-failure.json gdb-uart.log gdb-stderr.log chiron-trace.bin screen.png; do
     if [ -f "$TREE/build/chiron-qemu-init/$name" ]; then
         cp "$TREE/build/chiron-qemu-init/$name" "$ROOT/dist/ram-init/qemu-$name"
     fi
 done
+if [ "${CHIRON_KERNEL_MODE:-}" = ram-trace ]; then
+    for run in darwinboot-crypto14 darwinboot-bad-hmac chiron-qemu-init; do
+        capture="$ROOT/dist/ram-init/source-trace-captures/$run"
+        mkdir -p "$capture"
+        for name in gdb-stop.json gdb-failure.json gdb-uart.log gdb-stderr.log chiron-trace.bin screen.png; do
+            if [ -f "$TREE/build/$run/$name" ]; then
+                cp "$TREE/build/$run/$name" "$capture/"
+            fi
+        done
+    done
+fi
 if [ -f "$TREE/build/corecrypto-2023/post-test.json" ]; then
     cp "$TREE/build/corecrypto-2023/post-test.json" "$ROOT/dist/ram-init/"
 fi
@@ -32,6 +43,6 @@ cp "$TREE/build/chiron-qemu-init/gdb-stop.json" "$ROOT/dist/ram-init/qemu-observ
 cp "$TREE/build/chiron-qemu-init/gdb-uart.log" "$ROOT/dist/ram-init/qemu-uart.log"
 cp "$TREE/build/corecrypto-2023/post-test.json" "$ROOT/dist/ram-init/"
 if [ "${CHIRON_KERNEL_MODE:-}" = ram-trace ]; then
-    python3 "$ROOT/ci/test_source_trace.py" --tree "$TREE" --output "$ROOT/dist/ram-init/source-trace-tests"
     cp "$TREE/build/chiron-qemu-init/chiron-trace.bin" "$ROOT/dist/ram-init/"
+    python3 "$ROOT/ci/test_source_trace.py" --tree "$TREE" --output "$ROOT/dist/ram-init/source-trace-tests"
 fi

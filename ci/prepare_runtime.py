@@ -68,6 +68,9 @@ if trace_match:
                  "    trace_data = b''.join(bytes.fromhex(report['memory'][r]) for r in trace_requests)\n"
                  "    (output / 'chiron-trace.bin').write_bytes(trace_data)\n"
                  "    report['chiron_trace_file'] = 'chiron-trace.bin'\n")
+    replace_once(probe, "for fallback_name in ('_panic', '_panic_with_options'):\n",
+                 "for fallback_name in (() if args.break_symbol == '_chiron_trace_fault_checkpoint'\n"
+                 "                      else ('_panic', '_panic_with_options')):\n")
 
 
 def main():

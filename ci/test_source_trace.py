@@ -54,12 +54,28 @@ def main():
     reports = {}
     for name, image, extra in scenarios:
         destination = args.tree / ("build/chiron-source-" + name)
-        subprocess.run([
+        completed = subprocess.run([
             sys.executable, args.tree / "scripts/probe-darwinboot-xnu.py",
             "--kernel", image, "--output", destination, "--timeout", "180",
             "--break-symbol", "_chiron_trace_fault_checkpoint", "--kernel-extra-args", extra,
             "--qemu-ramfb", "--capture-qemu-screen",
-        ], cwd=args.tree, check=True)
+        ], cwd=args.tree, check=False)
+        capture = args.output / (name + "-capture")
+        capture.mkdir(parents=True, exist_ok=True)
+        for filename in ("chiron-trace.bin", "gdb-stop.json", "gdb-failure.json",
+                         "gdb-stderr.log", "gdb-uart.log", "screen.png"):
+            path = destination / filename
+            if path.exists():
+                shutil.copyfile(path, capture / filename)
+        if completed.returncode:
+            if (capture / "chiron-trace.bin").exists():
+                try:
+                    partial = decoder.decode((capture / "chiron-trace.bin").read_bytes(), symbols)
+                    (capture / "decoded.json").write_text(json.dumps(partial, indent=2) + "\n")
+                    (capture / "console.txt").write_text(partial["console"])
+                except ValueError as error:
+                    (capture / "decode-error.txt").write_text(str(error) + "\n")
+            raise RuntimeError(f"{name} observation failed; raw evidence preserved in {capture}")
         observed = decoder.decode((destination / "chiron-trace.bin").read_bytes(), symbols)
         if observed["build_id"] != build["build_id"]:
             raise ValueError("fault capture belongs to another source build")
