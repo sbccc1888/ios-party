@@ -50,16 +50,19 @@ def main():
     if qualification["kernel_sha256"] != kernel_sha256:
         raise ValueError("source observer tests must qualify the same normal runtime kernel")
     scenarios = (
-        ("panic", args.tree / "build/corecrypto-2023/negative-hmac/kernel.macho", ""),
-        ("data-abort", kernel, "chiron-trace-test=1"),
+        ("console", kernel, "", "_chiron_trace_console_checkpoint"),
+        ("panic", args.tree / "build/corecrypto-2023/negative-hmac/kernel.macho",
+         "", "_chiron_trace_fault_checkpoint"),
+        ("data-abort", kernel, "chiron-trace-test=1", "_chiron_trace_fault_checkpoint"),
     )
     reports = {}
-    for name, image, extra in scenarios:
+    console_proof = None
+    for name, image, extra, checkpoint in scenarios:
         destination = args.tree / ("build/chiron-source-" + name)
         completed = subprocess.run([
             sys.executable, args.tree / "scripts/probe-darwinboot-xnu.py",
             "--kernel", image, "--output", destination, "--timeout", "180",
-            "--break-symbol", "_chiron_trace_fault_checkpoint", "--kernel-extra-args", extra,
+            "--break-symbol", checkpoint, "--kernel-extra-args", extra,
             "--qemu-ramfb", "--capture-qemu-screen",
         ], cwd=args.tree, check=False)
         capture = args.output / (name + "-capture")
@@ -81,7 +84,9 @@ def main():
         observed = decoder.decode((destination / "chiron-trace.bin").read_bytes(), symbols)
         if observed["build_id"] != build["build_id"]:
             raise ValueError("fault capture belongs to another source build")
-        if name == "panic":
+        if name == "console":
+            console_proof = verify_console_capture(observed)
+        elif name == "panic":
             if (observed["fault"]["kind"] != 2 or not int(observed["panic_caller"], 16)
                     or "FIPS Kernel POST Failed" not in observed["console"]):
                 raise ValueError("real POST panic was not captured before native debugger handling")
@@ -103,8 +108,32 @@ def main():
         "kernel_sha256": kernel_sha256,
         "source_entry_and_mmu_observed": True, "native_framebuffer_mapping_observed": True,
         "panic_reason_observed": True, "data_abort_pc_esr_far_observed": True,
+        "console_initialization": console_proof,
         "faults": reports, "hardware_observed": False,
     }, indent=2) + "\n")
+
+
+def verify_console_capture(observed):
+    console = observed["console"]
+    required = (
+        "panic region uses device tree",
+        "panic DT region absent; no memory accessed",
+        "check_for_panic_log returned",
+        "screen map enter",
+        "screen map returned",
+        "gc_initialize returned",
+        "screen init returned",
+        "PE_create_console() returned",
+    )
+    if observed["panic_count"] or "panic fixed board region" in console:
+        raise ValueError("console must not panic or access a foreign board's fixed panic region")
+    position = -1
+    for message in required:
+        position = console.find(message, position + 1)
+        if position < 0:
+            raise ValueError(f"console initialization evidence missing or out of order: {message}")
+    return {"device_tree_panic_path": True, "absent_region_skipped": True,
+            "framebuffer_map_returned": True, "console_returned": True}
 
 
 if __name__ == "__main__":

@@ -43,7 +43,7 @@ if [ "${CHIRON_KERNEL_MODE:-}" = ram-trace ]; then
     xcrun dsymutil "$KERNEL" -o "$RUNTIME/kernel.dSYM"
     mkdir -p "$RUNTIME/observer-source"
     cp -R "$TREE/diagnostics" "$RUNTIME/observer-source/"
-    for file in osfmk/arm64/start.s osfmk/arm/arm_init.c osfmk/arm64/arm_vm_init.c osfmk/arm64/sleh.c osfmk/kern/debug.c osfmk/kern/startup.c osfmk/console/serial_console.c; do
+    for file in osfmk/arm64/start.s osfmk/arm/arm_init.c osfmk/arm64/arm_vm_init.c osfmk/arm64/sleh.c osfmk/kern/debug.c osfmk/kern/startup.c osfmk/console/serial_console.c pexpert/arm/pe_init.c osfmk/console/video_console.c osfmk/arm/io_map.c; do
         mkdir -p "$RUNTIME/observer-source/$(dirname "$file")"
         cp "$TREE/.cache/xnu-work/$file" "$RUNTIME/observer-source/$file"
     done

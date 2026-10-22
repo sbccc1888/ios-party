@@ -90,6 +90,9 @@ class SourceTraceTests(unittest.TestCase):
         self.assertEqual(int(result["fault"]["far"], 16), 0x1000)
         self.assertIn("expected panic 42 source-channel", result["console"])
         self.assertIn("SOURCE BUFFERED CONSOLE CAPTURE", result["console"])
+        self.assertIn("host framebuffer mapping PA=000000009d400000", result["console"])
+        self.assertIn("native video console bound BASE=fffffff020000000", result["console"])
+        self.assertIn("W=1080 H=2160 ROW=4320 DEPTH=32", result["console"])
         self.assertIn("PANIC CALLER FFFFFFF007999000", result["console"])
         self.assertEqual(len(result["events"]), 256)
         self.assertGreater(result["events_dropped"], 0)
@@ -110,6 +113,32 @@ class SourceTraceTests(unittest.TestCase):
         self.assertEqual(observer.pop("CONFIG_XNU_BOOT_PROGRESS"), "y")
         baseline.pop("CONFIG_XNU_BOOT_PROGRESS")
         self.assertEqual(observer, baseline)
+        self.assertEqual(baseline["CONFIG_XNU_DT_PANIC_REGION"], "y")
+
+    def test_console_qualification_requires_ordered_runtime_evidence(self):
+        verify = load("source_qualification", "ci/test_source_trace.py").verify_console_capture
+        messages = [
+            "panic region uses device tree",
+            "panic DT region absent; no memory accessed",
+            "check_for_panic_log returned",
+            "screen map enter PA=000000009d400000 SIZE=8e7000",
+            "screen map returned PA=000000009d400000 VA=fffffff010000000 SIZE=8e7000",
+            "gc_initialize returned",
+            "screen init returned",
+            "PE_create_console() returned",
+        ]
+        self.assertTrue(verify({"console": "\n".join(messages), "panic_count": 0})["console_returned"])
+        for index in range(len(messages)):
+            incomplete = messages[:index] + messages[index + 1:]
+            with self.assertRaises(ValueError):
+                verify({"console": "\n".join(incomplete), "panic_count": 0})
+        for console, panics in (
+            ("\n".join(reversed(messages)), 0),
+            ("\n".join(messages) + "\npanic fixed board region", 0),
+            ("\n".join(messages), 1),
+        ):
+            with self.assertRaises(ValueError):
+                verify({"console": console, "panic_count": panics})
 
     def test_unknown_or_uninitialized_trace_is_rejected(self):
         for raw in (b"", bytes(65536), bytes(65537)):

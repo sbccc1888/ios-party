@@ -9,6 +9,9 @@
     "osfmk/arm64/sleh.c": "10638ba610f21870182dd4b9ff6f5503fc320de5073bf7c1cfbef64b0a4c124a",
     "osfmk/kern/debug.c": "03300886ebf0ccf6159756491ae6af0e7cef031df70e15c9de71d8aea8ff42a5",
     "osfmk/kern/startup.c": "5022d12d5947893668ad444dd1cf5afad24cdb65cf5ba090beb8e9e8983cf3b4",
-    "osfmk/console/serial_console.c": "026aae3bd254250f6a74f1ab75668f6e3c225346e49cdec992a8e2165a26d4c9"
+    "osfmk/console/serial_console.c": "026aae3bd254250f6a74f1ab75668f6e3c225346e49cdec992a8e2165a26d4c9",
+    "pexpert/arm/pe_init.c": "b0a16fd068f06e8bd4f91cc1b64ddd751ad65ecaf3d80f5540882d1e97f69d5e",
+    "osfmk/console/video_console.c": "0bbc3e6242546f8c6d815d6184dc3d55c3292190bb496e6aa9efbb50c4c5444a",
+    "osfmk/arm/io_map.c": "fbb2852831265f8172a9804f987d182237ebdcdc4492705545104c96ba2b7788"
   }
 }

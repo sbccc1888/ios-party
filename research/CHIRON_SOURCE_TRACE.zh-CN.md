@@ -107,3 +107,34 @@ manifest、正常启动/受控 panic/真实数据异常的可读日志、原始�
 目前只面向固定的单 CPU 早期启动。尚不承诺 SMP、EL3/固件异常、硬件总线完全挂死或损坏栈的所有情况。若没有异常且 CPU 不再执行，内存记录只能保留最后经过的事件；不能据此编造故障原因，可能仍需要独立硬件调试或已验证的看门狗。
 
 这条路线的通过标准是每轮保存可解码的经过记录、真实异常/失败文本和地址，不是继续增加单个编号，也不是宣称 iOS 已启动。
+
+## 控制台路径修正与扩展记录
+
+用户照片 `IMG_20261022_151546.jpg` 首次显示编号 `CT-39726305878-1-BFAAE879457F` 的源码日志，最后可见 `0x6ad PE_create_console() enter`。正式页表、`pmap_bootstrap`、`arm_vm_init`、观察器原生映射与 `serial_init` 均已返回；尚无可见异常原因和实机 PID 1。下部旧 UEFI 菜单只是 framebuffer 中保留的内容，不能据此认定控制权已返回 UEFI。
+
+从已交付镜像原样提取内核后，`llvm-objdump --disassemble-symbols=_PE_create_console` 确认该函数包含：
+
+```text
+mov  w0, #0xc000
+movk w0, #0x3c0f, lsl #16
+mov  w1, #0x4000
+bl   _ml_io_map_wcomb
+...
+ldr  w8, [x0]
+...
+bl   _bzero
+```
+
+这与固定源码的 BCM2837 panic 区域宏相符：`0x3c0fc000`、16 KiB。当前 RAM 配置未启用已有的设备树路径，因此编译进了外来板级默认值。这是明确的配置缺陷，尚无实机 PC/总线证据证明它就是本次停滞根因。
+
+`chiron_raminit_defconfig` 和 `chiron_trace_defconfig` 同时启用 `CONFIG_XNU_DT_PANIC_REGION=y`，保持两种运行模式的非观察器配置一致。固定上游的现有实现校验 `pram/reg` 和 `/chosen/embedded-panic-log-size`；缺少区域即返回。当前项目及 QEMU ADT 都没有 `pram`，不会以替代地址进行映射或清零。此改动不改 POST、进程签名或 entitlement 路径。
+
+新增三个按固定源哈希校验的 overlay 目标：
+
+- `pexpert/arm/pe_init.c`：panic 检查入口/返回、采用的区域来源、校验失败原因、读取/清零，以及模式选择。
+- `osfmk/console/video_console.c`：输入几何与长度/偏移、映射决策、映射参数/返回、旧映射退役、锁/几何/VT100 初始化、清屏和控制台重绑。
+- `osfmk/arm/io_map.c`：早期虚拟地址分配及 `pmap_map_bd` 前后，保留原映射语义。
+
+`boot_progress_bind` 保留观察器独立映射，记录正常控制台的真实地址及几何，并重绘历史记录。宿主测试验证外部绑定不会覆盖观察器映射、几何或边界。全部十个改动文件随成品保存。
+
+新增 `_chiron_trace_console_checkpoint`，只在源码中的 `PE_create_console` 返回后执行。云端对相同内核在该处采集原生 QEMU 屏幕与原始记录，按执行顺序验证设备树路径、缺省区域跳过、framebuffer 映射和控制台返回，并拒绝固定板级区域日志及 panic。其余正常 PID 1、POST 正反例、panic 和注入异常资格全部保留。此检查只验证 QEMU，不能取代实机结果。

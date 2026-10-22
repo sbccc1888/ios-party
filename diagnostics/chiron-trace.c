@@ -296,6 +296,19 @@ void chiron_trace_initializer(unsigned returned, unsigned subsystem, unsigned ra
                        (unsigned long long)function, (unsigned long long)argument);
 }
 
+void chiron_trace_mapping(const char *stage, uint64_t physical, uint64_t virtual_address,
+                          uint64_t bytes, unsigned flags) {
+    trace_stage_format("%s PA=%016llx VA=%016llx SIZE=%llx FLAGS=%x", stage,
+                       (unsigned long long)physical, (unsigned long long)virtual_address,
+                       (unsigned long long)bytes, flags);
+}
+
+void chiron_trace_video(const char *stage, uint64_t base, unsigned width, unsigned height,
+                        unsigned stride, unsigned depth) {
+    trace_stage_format("%s BASE=%016llx W=%u H=%u ROW=%u DEPTH=%u", stage,
+                       (unsigned long long)base, width, height, stride, depth);
+}
+
 void chiron_trace_init(uint64_t physical, unsigned width, unsigned height, unsigned stride,
                        unsigned depth, uint64_t virtual_base, uint64_t physical_base) {
     chiron_trace_log.video_phys = physical;
@@ -335,10 +348,9 @@ void boot_progress_init(void) { boot_progress_stage("platform expert initialized
 void boot_progress_start(void) { boot_progress_stage("clock service created"); }
 int boot_progress_active(void) { return trace_ready != 0; }
 void boot_progress_bind(uintptr_t base, unsigned width, unsigned height, unsigned row, unsigned depth) {
-    (void)base; (void)width; (void)height; (void)row; (void)depth;
     /* Keep our own native mapping when the normal video console is replaced/cleared. */
     trace_repaint = 1;
-    boot_progress_stage("native video console mapping changed");
+    chiron_trace_video("native video console bound", base, width, height, row, depth);
 }
 void boot_progress_putc(char c) {
     uint64_t flags;
@@ -365,6 +377,9 @@ void chiron_trace_console(const char *text, unsigned size) {
 
 __attribute__((noinline))
 void chiron_trace_fault_checkpoint(void) { __asm__ volatile("nop\nnop\nnop" ::: "memory"); }
+
+__attribute__((noinline))
+void chiron_trace_console_checkpoint(void) { __asm__ volatile("nop\nnop\nnop" ::: "memory"); }
 
 void chiron_trace_exception(uint64_t pc, uint64_t esr, uint64_t far, uint64_t sp, uint64_t spsr) {
     struct chiron_trace_storage *log = &chiron_trace_log;

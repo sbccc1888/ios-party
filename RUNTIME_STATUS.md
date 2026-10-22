@@ -226,3 +226,11 @@ fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/boot-controls-24m/chir
 源码编译及资格运行 `39726305878` 已通过：真实控制台两次心跳、POST 正反例、原生 framebuffer 输出、真实 panic 原因/调用者，以及来自 `_chiron_trace_test+0x44` 的数据异常（ESR=`0x96000005`、FAR=`0x1000`）。源内核 SHA-256 为 `e0df2b09d270318c6190d4b1f12469a4147e85d5b0b544775870f0c318e853a5`。
 
 修正 manifest 文件名引用后，仅复用上述已验证内核进行云端打包，运行 `39736014170` 已通过；本地独立验证了 `.img` 后缀/ANDROID 头、完整镜像 SHA、FAT 中的内核 SHA、构建 ID 和不存在注入参数。成品 `dist/source-trace-39736014170/CT-39726305878-1-bfaae879457f.img`，26,697,728 字节，SHA-256 为 `234ed79e9e5d29a79af24e4110f5fa513a6c8f8056aafb203a557ef0069a7ce0`。未检测到 fastboot 设备，未启动手机；真实设备的 PID 1 和故障原因仍未确认。
+
+### 源码日志的首轮实机反馈与控制台路径
+
+2026-10-22，用户提供 `IMG_20261022_151546.jpg`，屏幕构建 ID 与上述交付相符。照片显示正式 TTBR0 撤销、`pmap_bootstrap`、`arm_vm_init`、独立原生 framebuffer 映射及 `serial_init` 均已完成，最后可见序号 `0x6ad`、`PE_create_console() enter`。没有可见 panic/异常原因或 PID 1；最后日志不能单独证明停滞发生的位置。照片不独立确认镜像哈希。
+
+源码及从旧成品 FAT 中提取的原始内核反汇编均确认：`PE_create_console` 中的旧 panic 检查映射 BCM2837 的 `0x3c0fc000 + 0x4000`，读取头部并可能调用 `bzero`。它不是本项目已验证的 Chiron panic 区域；即使该路径在 QEMU 可返回，也不能证明实机访问有效。两个 RAM 运行配置现启用已有 `XNU_DT_PANIC_REGION` 校验路径；当前 ADT 没有 `pram`，因此应跳过访问，不虚构物理地址。
+
+源码 overlay 扩展到 `pe_init.c`、`video_console.c` 和早期 `io_map`，记录 panic 检查、显示参数、映射地址/大小/属性、图形或文本模式、控制台锁/几何/清屏及返回。保留观察器自身的原生映射，控制台重绑时记录真实参数并重绘。新 QEMU 检查点必须实际观察设备树缺省跳过、映射返回和 `PE_create_console` 返回，再继续沿用 POST、两次心跳和 panic/数据异常资格。23 项本地主线测试及干净固定源码的 10 个 overlay 校验通过；云端编译、打包及新实机结论另记。

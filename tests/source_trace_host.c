@@ -85,6 +85,13 @@ int main(int argc, char **argv) {
                            0xfffffff007ffff00ULL, 0x600003c5);
     const char message[] = "SOURCE BUFFERED CONSOLE CAPTURE\n";
     chiron_trace_console(message, sizeof(message) - 1);
+    chiron_trace_mapping("host framebuffer mapping", GOP, 0xfffffff010000000ULL, 0x8e6200, 3);
+    uint64_t render_base = chiron_trace_log.render_base;
+    unsigned paints = chiron_trace_log.paints;
+    boot_progress_bind(0xfffffff020000000ULL, 1080, 2160, 4320, 32);
+    assert(chiron_trace_log.render_base == render_base);
+    assert(chiron_trace_log.width == 320 && chiron_trace_log.height == 240);
+    assert(chiron_trace_log.paints > paints);
     assert(chiron_trace_log.pc == 0xfffffff007123456ULL);
     assert(chiron_trace_log.esr == 0x96000004 && chiron_trace_log.fault_valid == 1);
     panic_case("expected panic %d %s", 42, "source-channel");
