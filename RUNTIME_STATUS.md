@@ -2,6 +2,8 @@
 
 本阶段目标已在 Cortex-A53 QEMU 中通过：单核、4 KiB XNU 启动自有静态 PID 1，完成真实的 PID/页大小检查、控制台写入和两次定时等待。2026-10-22，用户照片 `IMG_20261022_093457.jpg` 已显示 `XNU STAGE 17`，确认诊断内核中的原始 `arm_vm_init` 返回。尚无实机 PID 1 心跳、完整 iOS 用户态或明确故障原因的证据。后续停止零散二进制插桩，转向 [固定基线源码日志](research/CHIRON_SOURCE_TRACE.zh-CN.md)；既有诊断结果保留在本文。
 
+最新源码诊断成品为 `dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img`。云端完整资格和本地交付复核通过，修正外来板级 panic 地址并覆盖控制台内部路径；仍待实机临时启动。上一版照片的最后可见日志为 `PE_create_console() enter`，详见文末。
+
 ## 已有观察
 
 - 源密码学 529 个 C 文件、pthread 与 mockfs 已编译，运行内核已链接。
@@ -234,3 +236,7 @@ fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/boot-controls-24m/chir
 源码及从旧成品 FAT 中提取的原始内核反汇编均确认：`PE_create_console` 中的旧 panic 检查映射 BCM2837 的 `0x3c0fc000 + 0x4000`，读取头部并可能调用 `bzero`。它不是本项目已验证的 Chiron panic 区域；即使该路径在 QEMU 可返回，也不能证明实机访问有效。两个 RAM 运行配置现启用已有 `XNU_DT_PANIC_REGION` 校验路径；当前 ADT 没有 `pram`，因此应跳过访问，不虚构物理地址。
 
 源码 overlay 扩展到 `pe_init.c`、`video_console.c` 和早期 `io_map`，记录 panic 检查、显示参数、映射地址/大小/属性、图形或文本模式、控制台锁/几何/清屏及返回。保留观察器自身的原生映射，控制台重绑时记录真实参数并重绘。新 QEMU 检查点必须实际观察设备树缺省跳过、映射返回和 `PE_create_console` 返回，再继续沿用 POST、两次心跳和 panic/数据异常资格。23 项本地主线测试及干净固定源码的 10 个 overlay 校验通过；云端编译、打包及新实机结论另记。
+
+云构建及打包 `39745321134` 已全部成功，源码提交 `783cc7e68f24969bd38134ef4bdd28836dbc4b39`。新增早期原始记录包含 `panic DT region absent; no memory accessed`、`screen map returned`、`gc_initialize returned` 和 `0x6d5 PE_create_console() returned`；正常运行含两次真实 init 心跳，POST 正反例和故障捕获继续通过。实际 QEMU 屏幕已目视核对。
+
+新镜像为 `dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img`，26,697,728 字节，SHA-256 为 `4d24f9f96c021dba3984bae40d9db61bca287c4f22a4bdb7f59ab48a7477ef0a`；内核 SHA-256 为 `4fdd24494e423e52bf888bcc96e0f4036363caabd45d357496142b89778213f9`。本地重解码原始 console/normal 缓冲，核对容器 SHA-1、完整镜像 SHA-256、重建 FAT、四个载荷哈希、内核 POST HMAC、构建 ID 和无注入参数，全部通过，报告为同目录 `local-verification.json`。新成品反汇编也确认已编译设备树分支。未检测到 fastboot 设备，未自动启动手机；未取得新实机结论。

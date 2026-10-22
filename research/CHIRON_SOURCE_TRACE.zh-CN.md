@@ -4,33 +4,33 @@
 
 ## 状态
 
-已取得的实机证据是诊断内核显示 `17`，即原始 `arm_vm_init` 已返回。照片不独立校验镜像哈希，尚无实机 PID 1 或完整 iOS 用户态的证据，也尚未确定失败原因。
+已取得的最新实机照片 `IMG_20261022_151546.jpg` 显示编号源码日志，最后可见 `PE_create_console() enter`；内存初始化与观察器原生映射已返回。照片不独立校验镜像哈希，尚无实机 PID 1 或完整 iOS 用户态的证据，也尚未确定失败原因。
 
-源码通道已完成云端资格与交付复核。源码内核运行 `39726305878` 重新通过全部资格，交付打包运行 `39736014170` 只复用该内核，没有重新编译。旧的本地二进制插桩不再作为主线。设备仍待启动新镜像；此前设备故障原因没有被这次 QEMU 的受控测试自动确定。
+最新运行 `39745321134` 已编译修正后的源码内核，通过控制台早期路径、真实 PID 1 两次心跳、POST 正反例、panic 文本和注入异常资格，完成打包及本地交付复核。旧运行 `39726305878` 的内核经 `39736014170` 打包，是上述实机照片对应版本。新的设备树 panic 路径尚待实机测试；此前设备故障原因没有被 QEMU 的受控测试自动确定。
 
 ## 已验证交付
 
 ```text
-Kernel build ID: CT-39726305878-1-bfaae879457f
-Kernel source: bfaae879457f5bce5b222d8aa97393a1225824bf
-Packaging source: 9525fa7a9d21554af98a70f901a3a2a1349e5c13
-Image: dist/source-trace-39736014170/CT-39726305878-1-bfaae879457f.img
+Kernel build ID: CT-39745321134-1-783cc7e68f24
+Kernel source: 783cc7e68f24969bd38134ef4bdd28836dbc4b39
+Packaging source: 783cc7e68f24969bd38134ef4bdd28836dbc4b39
+Image: dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img
 Bytes: 26,697,728
-SHA-256: 234ed79e9e5d29a79af24e4110f5fa513a6c8f8056aafb203a557ef0069a7ce0
-Kernel SHA-256: e0df2b09d270318c6190d4b1f12469a4147e85d5b0b544775870f0c318e853a5
+SHA-256: 4d24f9f96c021dba3984bae40d9db61bca287c4f22a4bdb7f59ab48a7477ef0a
+Kernel SHA-256: 4fdd24494e423e52bf888bcc96e0f4036363caabd45d357496142b89778213f9
 ```
 
-本地已独立检查 manifest 正确指向 `.img`、Android 容器头、完整镜像哈希、FAT 内核哈希、内核内构建 ID、启动菜单标题一致，且手机启动配置没有 `chiron-trace-test`。22 项主线门禁和云端完整资格通过。此前已经跑过的 QEMU 资格未被假定继承，而是对当前内核重新取得。
+本地已独立检查 manifest 正确指向 `.img`、Android 容器头和 SHA-1、完整镜像哈希、重建 FAT 及四个载荷哈希、内核 POST HMAC、内核内构建 ID、启动菜单标题一致，且手机启动配置没有 `chiron-trace-test`。本地重新解码原始 console/normal 缓冲并确认控制台返回和两次心跳，报告为 `local-verification.json`。23 项主线门禁及云端完整资格通过；64 位显示字段修正后也重新通过宿主/ARM64 检查。此前已经跑过的 QEMU 资格未被假定继承，而是对当前内核重新取得。
 
 手机进入 fastboot 后：
 
 ```sh
-fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/source-trace-39736014170/CT-39726305878-1-bfaae879457f.img
+fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img
 ```
 
-预期是带 `CT-39726305878-1-BFAAE879457F` 标题的连续日志，而不是单个 `XNU STAGE` 编号。记录最后日志；红色 `PANIC CALLER` 表示记录了 panic 原因并停止。`EXCEPTION - MAY BE RECOVERABLE` 不独立代表失败；若之后持续出现 `CHIRON RAM init: PID 1, 4K ABI, heartbeat`，说明测试 init 仍在运行。一条心跳本身不足以证明后续定时等待完成。
+预期是带 `CT-39745321134-1-783CC7E68F24` 标题的连续日志，而不是单个 `XNU STAGE` 编号。先观察 `panic DT region absent` 及 `PE_create_console returned`，再记录后续最后日志；红色 `PANIC CALLER` 表示记录了 panic 原因并停止。`EXCEPTION - MAY BE RECOVERABLE` 不独立代表失败；若之后出现两次 `CHIRON RAM init: PID 1, 4K ABI, heartbeat`，支持测试 init 完成两次定时等待。一条心跳本身不足以证明后续定时等待完成。
 
-manifest、正常启动/受控 panic/真实数据异常的可读日志、原始记录、实际 QEMU 屏幕、内核符号、dSYM 和观察器源码位于 `dist/source-trace-39736014170/`。当前 `fastboot devices` 为空，没有自动启动或重启手机。
+manifest、控制台早期/正常启动/受控 panic/真实数据异常的可读日志、原始记录、实际 QEMU 屏幕、内核符号、dSYM 和观察器源码位于 `dist/source-trace-39745321134/`。当前 `fastboot devices` 为空，没有自动启动或重启手机。
 
 ## 固定输入
 
@@ -41,7 +41,7 @@ manifest、正常启动/受控 panic/真实数据异常的可读日志、原始�
 - 原 `chiron_raminit_defconfig` 的单 CPU、4 KiB、RAM init、真实源密码学和 pthread 组合。
 - 已验证的 EFI 与 RAM 卷固件产物，以及固定的零尾部传输汇编；不在本轮修改其固件主体。
 
-`chiron_trace_defconfig` 只改变观察器开关。七个修改目标在应用固定上游补丁后，必须匹配 `diagnostics/source-contexts.json` 的源文件哈希；否则拒绝 overlay。源码变化、编译器、归档输入、链接后的内核哈希和构建编号必须随产物保存。
+`chiron_trace_defconfig` 相对当前 RAM 基线只改变观察器开关。十个修改目标在应用固定上游补丁后，必须匹配 `diagnostics/source-contexts.json` 的源文件哈希；否则拒绝 overlay。源码变化、编译器、归档输入、链接后的内核哈希和构建编号必须随产物保存。
 
 本轮不对编译后的 XNU 改入口、替换指令或占用链接填充。普通构建流程仍进行源密码学 POST HMAC 的链接后封装，并验证实际正反例。
 
