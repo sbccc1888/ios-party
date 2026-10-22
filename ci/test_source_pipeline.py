@@ -15,7 +15,8 @@ def main():
     # or use the archived kernel/handoff binary insertion tools.
     for name in ("test_bringup", "test_entry_probe", "test_source_trace",
                  "test_runtime_selftest_gate", "test_ram_selftest", "test_ufs_readonly",
-                 "test_foundation_runtime", "test_ramfs", "test_userspace_audit",
+                 "test_foundation_runtime", "test_ramfs", "test_ramfs_probe",
+                 "test_ramfs_runtime", "test_userspace_audit",
                  "test_page_qualification", "test_abi_probe", "test_ufs_handoff"):
         suite.addTests(loader.loadTestsFromName(name))
     for name in (

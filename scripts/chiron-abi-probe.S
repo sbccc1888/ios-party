@@ -3,6 +3,11 @@
 #ifndef CHIRON_ABI_CHILD_SIZE
 #error Build with ci/build_chiron_abi_probe.py.
 #endif
+#ifdef CHIRON_ABI_RAMFS
+#ifndef CHIRON_ABI_FILE_SUM
+#error RAMFS probe requires the expected uint64 file byte sum.
+#endif
+#endif
 
 .macro ADDRESS reg, symbol
   adrp \reg, \symbol@PAGE
@@ -318,6 +323,24 @@ Lmarker_compare:
   b.ne Lfailure
   subs x11, x11, #1
   b.ne Lmarker_compare
+#ifdef CHIRON_ABI_RAMFS
+  STAGE 65
+  mov x9, x25
+  mov x10, #0
+  mov x11, #CHIRON_ABI_CHILD_SIZE
+  cbz x11, Lfailure
+Lfile_sum:
+  ldrb w12, [x9], #1
+  add x10, x10, x12         // uint64 modulo sum; read every byte across file pages
+  subs x11, x11, #1
+  b.ne Lfile_sum
+  movz x13, #((CHIRON_ABI_FILE_SUM) & 0xffff)
+  movk x13, #(((CHIRON_ABI_FILE_SUM) >> 16) & 0xffff), lsl #16
+  movk x13, #(((CHIRON_ABI_FILE_SUM) >> 32) & 0xffff), lsl #32
+  movk x13, #(((CHIRON_ABI_FILE_SUM) >> 48) & 0xffff), lsl #48
+  cmp x10, x13
+  b.ne Lfailure
+#endif
   mov x9, #CHIRON_ABI_CHILD_SIZE
   str x9, [x28, #224]
   mov x0, x25
@@ -443,7 +466,11 @@ Lreceive: .space 128
 Ltimeval: .quad 1, 0
 Lmib: .word 6, 7
 Lconsole: .asciz "/dev/console"
+#ifdef CHIRON_ABI_RAMFS
+Lfile: .asciz "/usr/lib/chiron/probe.bin"
+#else
 Lfile: .asciz "/probe.bin"
+#endif
 Lmarker: .ascii "CHIRON-SELFTEST-INDEPENDENT-CHILD-v1\n"
 Lmarker_end:
 Ldigits: .ascii "0123456789abcdef"

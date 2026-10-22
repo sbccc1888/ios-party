@@ -62,6 +62,7 @@ chiron_ramfs_destroy_nodes(mockfs_mount_t m)
 			}
 		}
 	}
+	kfree_type(struct chiron_ramfs_nodes, r->node_store);
 	kfree_type(struct chiron_ramfs_mount, r);
 	m->ramfs = NULL;
 }
@@ -93,8 +94,15 @@ chiron_ramfs_mountroot(mount_t mp, vnode_t rvp, vfs_context_t ctx, int *handled)
 		kfree_type(struct chiron_ramfs_mount, r);
 		return error == CR_IO ? EIO : EINVAL;
 	}
+	r->node_store = kalloc_type(struct chiron_ramfs_nodes, Z_WAITOK | Z_ZERO);
+	if (!r->node_store) {
+		kfree_type(struct chiron_ramfs_mount, r);
+		return ENOMEM;
+	}
+	r->nodes = r->node_store->entries;
 	mockfs_mount_t m = kalloc_type(struct mockfs_mount, Z_WAITOK | Z_ZERO);
 	if (!m) {
+		kfree_type(struct chiron_ramfs_nodes, r->node_store);
 		kfree_type(struct chiron_ramfs_mount, r);
 		return ENOMEM;
 	}

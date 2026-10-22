@@ -36,6 +36,7 @@ static uint64_t cluster_size, pagein_size;
 void *
 host_allocate(size_t size)
 {
+	assert(size <= 16384);
 	if (host_fail_allocation == 0) {
 		return NULL;
 	}
@@ -352,7 +353,7 @@ main(int argc, char **argv)
 		test_new(&m);
 	}
 	m.mnt_devblocksize = 512;
-	for (int failure = 0; failure < 2; ++failure) {
+	for (int failure = 0; failure < 3; ++failure) {
 		host_fail_allocation = failure;
 		assert(mockfs_mountroot(&m, &device, NULL) == ENOMEM && !m.mnt_data);
 		assert(host_allocations == 0);

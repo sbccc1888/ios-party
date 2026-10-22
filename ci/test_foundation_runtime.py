@@ -111,6 +111,11 @@ def main():
         sys.executable, ROOT / "ci/build_chiron_ramfs_archive.py",
         "--tree", tree, "--output", output / "ramfs-archive",
     ], check=True)
+    subprocess.run([
+        sys.executable, ROOT / "ci/test_ramfs_runtime.py",
+        "--tree", tree, "--runtime", runtime_dir, "--archive", output / "ramfs-archive",
+        "--output", output / "ramfs-runtime",
+    ], check=True)
     report = {
         "schema": 1, "build_id": build["build_id"],
         "kernel_sha256": runtime["kernel_sha256"],
@@ -118,6 +123,8 @@ def main():
         "abi": json.loads((output / "abi-verification.json").read_text()),
         "ramfs_compile": json.loads(
             (output / "ramfs-archive/compile-verification.json").read_text()),
+        "ramfs_runtime": json.loads(
+            (output / "ramfs-runtime/verification.json").read_text()),
         "qemu_only": True, "hardware_observed": False,
         "apple_userspace_executed": False,
         "phone_selftest_fixture_replaced": False,

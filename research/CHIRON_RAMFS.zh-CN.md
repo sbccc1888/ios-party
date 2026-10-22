@@ -1,5 +1,10 @@
 # CHRAMFS v1 独立多文件只读 RAM 根卷实验
 
+主任务追加记录：首轮云运行 `39780009249` 的真实 XNU 编译发现挂载结构体
+16408 字节超过 16 KiB typed allocation 上限。节点指针表已改为独立分配，
+挂载结构与节点表各有静态大小守卫；宿主分配适配器新增同等限制和第三处分配失败覆盖，
+原 12 项测试复测通过。真实编译及挂载运行资格仍需后续云端结果。
+
 日期：2026-10-22。任务 A 仅新增 `tools/chiron_ramfs.py`、
 `ci/apply_chiron_ramfs.py`、`package/ChironRamfs/`、`tests/test_ramfs.py`、
 本文；不修改 init/selftest、既有 N4KROOT builder/校验器、主 CI 入口、

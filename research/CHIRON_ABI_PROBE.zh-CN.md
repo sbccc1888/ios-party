@@ -1,5 +1,12 @@
 # 独立静态 ARM64 系统接口探针
 
+主任务追加记录：云运行 `39780009249`、源码提交 `6cd298b87635` 已在真实
+XNU/QEMU 完成此默认探针，`required_mask=passed_mask=127`、
+`failure_stage=0`、心跳 2 次，commpage 两个页 shift 均为 12。
+该作业后续 RAMFS 编译失败；默认 ABI 探针的原始观察仍单独保存在
+`dist/foundation-attempt-39780009249/qemu-abi/gdb-stop.json` 和
+`abi-verification.json`，不记为整个基础任务作业成功。未取得实机资格。
+
 该探针用于原 RAM 自检以外的接口诊断。它拥有独立的启动文件、结果 ABI、构建报告和验证器，不替换现有 `chiron-init.S` 或四项 selftest。主集成流程负责把它放入单独的 QEMU 资格，不放入原手机镜像。
 
 ## 构建和观察接口
@@ -67,6 +74,14 @@ iOS 17 目标不能依赖旧 `mach_msg_trap(-31)` 发送自定义消息：固定
 
 每组完成打印 `CHIRON ABI PASS ...`；所有项目完成后打印 `CHIRON ABI PROBE PASS`，随后两次实际控制台 write/1 秒 select 完成才发布 `_chiron_init_status=2`。`_chiron_heartbeats` 每次完整 write/select 后递增。
 
+### 可选 RAMFS 全文件读回
+
+RAMFS agent A 的独立构建可同时定义 `CHIRON_ABI_RAMFS` 和 `CHIRON_ABI_FILE_SUM`。前者将 `Lfile` 改为 `/usr/lib/chiron/probe.bin`；后者必须是本次实际映射文件所有字节之和，按 uint64 模加法计算。定义 RAMFS 宏而未定义 FILE_SUM 会在预处理时报错。
+
+该分支沿用 `CHIRON_ABI_CHILD_SIZE`、`CHIRON_ABI_CHILD_MAP_SIZE` 和 `CHIRON_ABI_MARKER_OFFSET`，顺序为：打开文件（60）→只读映射（61）→Mach-O header 和 marker 验证（62）→逐字节读完恰好 `CHIRON_ABI_CHILD_SIZE` 字节并比较总和（65）→unmap（63）→close（64）→发布原有 file_mapping bit 32。循环逐字节加载整个文件，覆盖实际文件跨越的多个 4K 页，不读取文件末尾以外的映射填充。64 位期望总和使用一个 movz 和三个 movk，分别组装 0、16、32、48 位的 16 位片段。
+
+求和失败保留阶段 65、status=-1 并到达 `_checkpoint`；不会发布 file_mapping bit。成功时仍以 completed_stage=64 结束，结果 ABI 保持 256 字节，没有新增结果字段或 bit。这个累加检查只证明实际文件读回与构建绑定总和一致，不声明密码学认证。默认未定义 `CHIRON_ABI_RAMFS` 时仍使用 `/probe.bin`，不编译阶段 65，保持原探针行为。现有 builder/test 文件不负责启用该宏；新增宏构建由 agent A 集成，真实 relink 和 QEMU 验证由主 agent 执行。
+
 错误返回或数据断言失败会打印 `CHIRON ABI PROBE FAIL stage=0x... call=0x... return=0x...`，设置 `_chiron_init_status=-1` 并进入 `_checkpoint`。打印失败阶段时不会覆盖第一处失败的诊断字段。失败后不再推进测试；未完成资源释放由该次诊断启动结束处理。CPU 异常/内核 panic 等不能作为正常断言失败处理，需外层观察器记录。
 
 ## 结果 ABI v1
@@ -122,6 +137,7 @@ iOS 17 目标不能依赖旧 `mach_msg_trap(-31)` 发送自定义消息：固定
 | 40 | commpage shift断言 |
 | 50 / 51 / 52 / 53 / 54 / 55 / 56 | 匿名map / 零页及写入 / R保护 / 读回 / RW保护 / 写回 / unmap |
 | 60 / 61 / 62 / 63 / 64 | 文件打开 / mmap / 内容断言 / unmap / close |
+| 65 | 仅 RAMFS 分支：marker 验证后、unmap 前的全文件逐字节累加比较 |
 | 90 / 91 | 正常控制台write / 心跳select |
 
 ## 验证边界

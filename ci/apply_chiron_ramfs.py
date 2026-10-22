@@ -24,7 +24,7 @@ OVERLAY = {
     "mockfs_fsnode.c": "40d5cc87818ceec1136f4ac09c5e9029b9c747b305f6faeeeb9ad906c63f763f",
     "mockfs_vnops.c": "5bcc92572c87718baad7a264825b9f5dfcf14e68902a0b2ac3a3501b75e6b136",
     "mockfs_vfsops.c": "006440b773e6a3e45d318a7e918cc8a2fdd82c50052be74f7988ea3fd66dce59",
-    "mockfs.h": "8da0a852cc4892e42479557c8bde28033bbdc5d4fbcccb2c79ff45bc5accb852",
+    "mockfs.h": "7fd33107037a09530353f04950543b43e673b04efb5217f125a352572fbeba6d",
     "mockfs_vnops.h": "bd01f3683ec094b54aafaa9773b0f9280e2dce64d2c2965ec53b79bab2480d2a",
 }
 INSTALLED = ("chiron_ramfs.h", "ramfs_mount.inc", "ramfs_vnops.inc")
@@ -45,10 +45,17 @@ def transform(name, text):
         text = once(text, "#include <sys/kernel_types.h>", """#include <sys/kernel_types.h>
 #include <miscfs/mockfs/chiron_ramfs.h>
 
+struct chiron_ramfs_nodes {
+	mockfs_fsnode_t entries[CR_MAX_NODES];
+};
+
 struct chiron_ramfs_mount {
 	struct cr_volume volume;
-	mockfs_fsnode_t nodes[CR_MAX_NODES];
-};""")
+	struct chiron_ramfs_nodes *node_store;
+	mockfs_fsnode_t *nodes;
+};
+_Static_assert(sizeof(struct chiron_ramfs_mount) <= 16384, "RAMFS typed allocation size");
+_Static_assert(sizeof(struct chiron_ramfs_nodes) <= 16384, "RAMFS node allocation size");""")
         text = once(text, "struct mockfs_mount {", """struct mockfs_mount {
 	struct chiron_ramfs_mount *ramfs; /* CHIRON_RAMFS_EXPERIMENT v1 */""")
     elif name == "mockfs_fsnode.h":
