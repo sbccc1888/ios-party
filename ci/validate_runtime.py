@@ -65,6 +65,16 @@ def validate(post, observed, require_selftest=False):
             "trust_cache_runtime_enabled": False}
     if require_selftest:
         result["user_selftest"] = validate_user_selftest(memory)
+        sp = int(observed.get("sp", "0"), 16)
+        sctlr = int(observed.get("system_registers", {}).get("SCTLR_EL1", "0"), 16)
+        if not sp or sp & 15:
+            raise ValueError("the selftest checkpoint still has a misaligned user stack")
+        if not sctlr & 16:
+            raise ValueError("EL0 stack alignment checking must remain enabled")
+        result["user_selftest"].update({
+            "checkpoint_sp": hex(sp), "checkpoint_stack_aligned": True,
+            "stack_alignment_check_enabled": True, "sctlr_el1": hex(sctlr),
+        })
     return result
 
 

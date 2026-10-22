@@ -65,8 +65,17 @@ class RuntimeSelftestGateTests(unittest.TestCase):
                 "_armcpu_registered": 1, "_armcpu_gic_ready": 1, "_armcpu_timer_interrupts": 3,
             },
             "pthread_globals": {"_source_pthread_status": 0, "_pthread_functions": 1},
+            "sp": "0x16fdffe00", "system_registers": {"SCTLR_EL1": "0x3454593d"},
         }
         self.assertTrue(RUNTIME.validate(post, observed, require_selftest=True)["user_selftest"])
+        observed["sp"] = "0x16fdffe08"
+        with self.assertRaises(ValueError):
+            RUNTIME.validate(post, observed, require_selftest=True)
+        observed["sp"] = "0x16fdffe00"
+        observed["system_registers"]["SCTLR_EL1"] = "0x3454592d"
+        with self.assertRaises(ValueError):
+            RUNTIME.validate(post, observed, require_selftest=True)
+        observed["system_registers"]["SCTLR_EL1"] = "0x3454593d"
         memory.pop("_chiron_selftest_results")
         with self.assertRaises(ValueError):
             RUNTIME.validate(post, observed, require_selftest=True)
@@ -81,6 +90,10 @@ class RuntimeSelftestGateTests(unittest.TestCase):
                 "source_pthread_registered": True, "initial_tcr": "0x200000000",
                 "user_selftest": RUNTIME.validate_user_selftest(self.memory()),
             }
+            report["user_selftest"].update({
+                "checkpoint_stack_aligned": True, "stack_alignment_check_enabled": True,
+                "checkpoint_sp": "0x16fdffe00", "sctlr_el1": "0x3454593d",
+            })
             for filename, field in (
                 *PAYLOAD.FILES.items(),
                 ("root.img", "root.img_sha256"), ("child.macho", "child.macho_sha256"),
@@ -92,6 +105,12 @@ class RuntimeSelftestGateTests(unittest.TestCase):
             report_path = directory / "runtime-test.json"
             report_path.write_text(json.dumps(report))
             self.assertTrue(PAYLOAD.require_runtime(directory)["user_selftest"]["child_reaped"])
+            report["user_selftest"].pop("checkpoint_stack_aligned")
+            report_path.write_text(json.dumps(report))
+            with self.assertRaises(ValueError):
+                PAYLOAD.require_runtime(directory)
+            report["user_selftest"]["checkpoint_stack_aligned"] = True
+            report_path.write_text(json.dumps(report))
             for filename in ("root.img", "child.macho"):
                 original = (directory / filename).read_bytes()
                 (directory / filename).write_bytes(b"changed after QEMU observation")

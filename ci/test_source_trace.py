@@ -6,8 +6,10 @@ import importlib.util
 import hashlib
 import json
 import shutil
+import struct
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 
@@ -16,6 +18,23 @@ def decode_module(root):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def build_user_sigbus_fixture(root, tree):
+    spec = importlib.util.spec_from_file_location("sigbus_fixture_builder", root / "ci/build_ram_selftest.py")
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    destination = tree / "build/chiron-user-sigbus"
+    destination.mkdir(parents=True, exist_ok=True)
+    sdk = subprocess.check_output(["xcrun", "--sdk", "iphoneos", "--show-sdk-path"], text=True).strip()
+    _, signature, addresses = builder.build_program(
+        root / "scripts/chiron-init-sigbus.S", "launchd", destination, sdk)
+    (destination / "addresses.json").write_text(json.dumps(addresses, indent=2) + "\n")
+    identity = uuid.uuid5(uuid.NAMESPACE_URL, "org.ios-party.sigbus:" + signature["cdhash"])
+    module = struct.pack("<I16sI", 2, identity.bytes, 1)
+    module += bytes.fromhex(signature["cdhash"]) + bytes((2, 0, 0, 0))
+    (destination / "trustcache.bundle").write_bytes(struct.pack("<II", 1, 8) + module)
+    return destination, addresses
 
 
 def main():
@@ -49,21 +68,26 @@ def main():
     qualification = json.loads((root / "dist/ram-init/runtime-test.json").read_text())
     if qualification["kernel_sha256"] != kernel_sha256:
         raise ValueError("source observer tests must qualify the same normal runtime kernel")
+    sigbus, sigbus_addresses = build_user_sigbus_fixture(root, args.tree)
     scenarios = (
-        ("console", kernel, "", "_chiron_trace_console_checkpoint"),
+        ("console", kernel, "", "_chiron_trace_console_checkpoint", []),
         ("panic", args.tree / "build/corecrypto-2023/negative-hmac/kernel.macho",
-         "", "_chiron_trace_fault_checkpoint"),
-        ("data-abort", kernel, "chiron-trace-test=1", "_chiron_trace_fault_checkpoint"),
+         "", "_chiron_trace_fault_checkpoint", []),
+        ("data-abort", kernel, "chiron-trace-test=1", "_chiron_trace_fault_checkpoint", []),
+        ("user-sigbus", kernel, "", "_chiron_trace_panic_checkpoint",
+         ["--native-user", "--native-user-image", sigbus / "launchd.macho",
+          "--trust-cache", sigbus / "trustcache.bundle", "--armvirt", "--armcpu", "--nvram-proxy"]),
     )
     reports = {}
     console_proof = None
-    for name, image, extra, checkpoint in scenarios:
+    sigbus_proof = None
+    for name, image, extra, checkpoint, options in scenarios:
         destination = args.tree / ("build/chiron-source-" + name)
         completed = subprocess.run([
             sys.executable, args.tree / "scripts/probe-darwinboot-xnu.py",
             "--kernel", image, "--output", destination, "--timeout", "180",
             "--break-symbol", checkpoint, "--kernel-extra-args", extra,
-            "--qemu-ramfb", "--capture-qemu-screen",
+            "--qemu-ramfb", "--capture-qemu-screen", *options,
         ], cwd=args.tree, check=False)
         capture = args.output / (name + "-capture")
         capture.mkdir(parents=True, exist_ok=True)
@@ -90,6 +114,10 @@ def main():
             if (observed["fault"]["kind"] != 2 or not int(observed["panic_caller"], 16)
                     or "FIPS Kernel POST Failed" not in observed["console"]):
                 raise ValueError("real POST panic was not captured before native debugger handling")
+        elif name == "user-sigbus":
+            sigbus_proof = verify_user_sigbus_capture(observed, sigbus_addresses)
+            for filename in ("launchd.macho", "trustcache.bundle", "addresses.json"):
+                shutil.copyfile(sigbus / filename, capture / filename)
         else:
             if observed["fault"]["kind"] != 1 or int(observed["fault"]["far"], 16) != 0x1000:
                 raise ValueError("real data-abort FAR was not captured")
@@ -110,8 +138,40 @@ def main():
         "panic_reason_observed": True, "data_abort_pc_esr_far_observed": True,
         "console_initialization": console_proof,
         "user_selftest": qualification.get("user_selftest"),
+        "user_sigbus_fault_observed": sigbus_proof is not None,
+        "user_sigbus": sigbus_proof,
         "faults": reports, "hardware_observed": False,
     }, indent=2) + "\n")
+
+
+def verify_user_sigbus_capture(observed, addresses):
+    abort = observed.get("user_abort", {})
+    signal = observed.get("user_signal", {})
+    pc, target = addresses["_chiron_sigbus_store"], addresses["_chiron_sigbus_target"]
+    if (observed["fault"]["kind"] != 2 or not observed["panic_count"]
+            or not int(observed["panic_caller"], 16)):
+        raise ValueError("the actual PID 1 signal did not reach the panic observer")
+    reason = observed["console"].lower()
+    if "initproc" not in reason or "exit reason namespace 2 subcode 0xa" not in reason:
+        raise ValueError("SIGBUS did not produce the expected initproc signal exit panic")
+    if (not abort.get("count") or abort.get("pid") != 1 or int(abort["pc"], 16) != pc
+            or int(abort["far"], 16) != target or int(abort["mach_code"], 16) != 2
+            or not abort["far_valid"]
+            or int(abort["esr"], 16) >> 26 != 0x24 or not (int(abort["esr"], 16) & 0x40)):
+        raise ValueError("unhandled EL0 write-protection abort was not captured exactly")
+    if (not signal.get("count") or signal.get("pid") != 1 or signal.get("signal") != 10
+            or signal.get("mach_exception") != 1 or int(signal["mach_code"], 16) != 2
+            or int(signal["mach_address"], 16) != target):
+        raise ValueError("the real Mach exception was not translated to PID 1 SIGBUS")
+    tail = observed["console"].split("PANIC CALLER", 1)[-1]
+    for text in ("LAST USER SIGNAL PID 0000000000000001", f"USER PC {pc:016X}",
+                 f"USER FAR {target:016X}", "USER MACH CODE 0000000000000002",
+                 "USER ESR ", "LAST EXCEPTION PC "):
+        if text not in tail:
+            raise ValueError("the final panic text lost user fault context: " + text)
+    return {"pid": 1, "signal": 10, "mach_exception": 1, "mach_code": 2,
+            "pc": hex(pc), "far": hex(target), "esr": abort["esr"],
+            "panic_retains_user_fault": True, "qemu_only": True}
 
 
 def verify_console_capture(observed):

@@ -34,6 +34,7 @@
 #define CT_BA_DEPTH 80
 #define CT_NATIVE_VECTORS 57736
 #define CT_EARLY_DEPTH 57744
+#define CT_USER_EXTENSION 57776
 
 #ifndef __ASSEMBLER__
 #include <stddef.h>
@@ -65,7 +66,12 @@ struct chiron_trace_storage {
     uint64_t native_vectors;
     uint32_t early_fault_depth, early_fault_slot;
     uint64_t nested_pc, nested_esr, nested_far;
-    unsigned char reserved[7760];
+    uint32_t extension_version, user_abort_count, user_abort_pid, signal_count;
+    uint64_t user_abort_pc, user_abort_esr, user_abort_far;
+    uint64_t user_abort_sp, user_abort_spsr, user_abort_code;
+    uint32_t signal_pid, signal_number, signal_exception, signal_reserved;
+    uint64_t signal_code, signal_subcode;
+    unsigned char reserved[7664];
 };
 
 _Static_assert(sizeof(struct chiron_trace_storage) == CT_BYTES, "trace wire size");
@@ -84,6 +90,7 @@ _Static_assert(offsetof(struct chiron_trace_storage, build_id) == CT_BUILD_ID, "
 _Static_assert(offsetof(struct chiron_trace_storage, early_pc) == 57632, "early PC offsets");
 _Static_assert(offsetof(struct chiron_trace_storage, native_vectors) == CT_NATIVE_VECTORS, "native vector offset");
 _Static_assert(offsetof(struct chiron_trace_storage, early_fault_depth) == CT_EARLY_DEPTH, "early depth offset");
+_Static_assert(offsetof(struct chiron_trace_storage, extension_version) == CT_USER_EXTENSION, "user extension offset");
 
 extern struct chiron_trace_storage chiron_trace_log;
 extern const char chiron_trace_build_id[96];
@@ -95,7 +102,10 @@ void chiron_trace_initializer(unsigned, unsigned, unsigned, uintptr_t, uintptr_t
 void chiron_trace_mapping(const char *, uint64_t, uint64_t, uint64_t, unsigned);
 void chiron_trace_video(const char *, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 void chiron_trace_exception(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+void chiron_trace_user_abort(unsigned, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+void chiron_trace_signal(unsigned, unsigned, unsigned, uint64_t, uint64_t);
 void chiron_trace_panic(const char *, va_list *, unsigned long);
+void chiron_trace_panic_checkpoint(void);
 void chiron_trace_fault_checkpoint(void);
 void chiron_trace_console_checkpoint(void);
 void chiron_trace_test(void);

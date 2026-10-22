@@ -1,4 +1,5 @@
 import importlib.util
+import copy
 import hashlib
 import json
 import os
@@ -95,10 +96,46 @@ class SourceTraceTests(unittest.TestCase):
         self.assertIn("W=1080 H=2160 ROW=4320 DEPTH=32", result["console"])
         self.assertIn("W=4294968376 H=2160 ROW=4320 DEPTH=32", result["console"])
         self.assertIn("PANIC CALLER FFFFFFF007999000", result["console"])
+        self.assertEqual(result["user_abort"]["pc"], "0x100004000")
+        self.assertEqual(result["user_abort"]["mach_code"], "0x2")
+        self.assertTrue(result["user_abort"]["far_valid"])
+        self.assertEqual(result["user_signal"]["pid"], 1)
+        self.assertEqual(result["user_signal"]["signal"], 10)
+        self.assertEqual(result["user_signal"]["mach_code"], "0x2")
+        panic_tail = result["console"].split("PANIC CALLER", 1)[1]
+        self.assertIn("LAST USER SIGNAL PID 0000000000000001", panic_tail)
+        self.assertIn("USER PC 0000000100004000", panic_tail)
+        self.assertIn("USER ESR 000000009200004F", panic_tail)
+        self.assertIn("USER FAR 0000000100000000", panic_tail)
+        self.assertIn("LAST EXCEPTION PC FFFFFFF007123456", panic_tail)
+        verify = load("user_sigbus_qualification", "ci/test_source_trace.py").verify_user_sigbus_capture
+        addresses = {"_chiron_sigbus_store": 0x100004000, "_chiron_sigbus_target": 0x100000000}
+        self.assertTrue(verify(result, addresses)["panic_retains_user_fault"])
+        for group, field, value in (
+            ("user_abort", "pc", "0x100004004"), ("user_abort", "far", "0x100000008"),
+            ("user_abort", "mach_code", "0x1"), ("user_abort", "pid", 2),
+            ("user_abort", "esr", "0x9200000f"), ("user_signal", "signal", 11),
+            ("user_signal", "mach_code", "0x1"), ("user_signal", "pid", 2),
+        ):
+            changed = copy.deepcopy(result)
+            changed[group][field] = value
+            with self.subTest(group=group, field=field), self.assertRaises(ValueError):
+                verify(changed, addresses)
+        alignment = bytearray(raw)
+        struct.pack_into("<Q", alignment, 57800, 0x26 << 26)
+        struct.pack_into("<Q", alignment, 57816, 0x16fdffe08)
+        struct.pack_into("<Q", alignment, 57832, 0x103)
+        alignment_result = decode(alignment)
+        self.assertFalse(alignment_result["user_abort"]["far_valid"])
+        self.assertEqual(alignment_result["user_abort"]["mach_code"], "0x103")
+        changed = copy.deepcopy(result)
+        changed["console"] = "PANIC CALLER without the retained fault summary"
+        with self.assertRaises(ValueError):
+            verify(changed, addresses)
         self.assertEqual(len(result["events"]), 256)
         self.assertGreater(result["events_dropped"], 0)
         self.assertGreater(result["reentries"], 0)
-        for offset, value in ((8, 2), (176, 32768), (180, 32769)):
+        for offset, value in ((8, 2), (176, 32768), (180, 32769), (57776, 2), (57852, 1)):
             changed = bytearray(raw)
             struct.pack_into("<I", changed, offset, value)
             with self.assertRaises(ValueError):

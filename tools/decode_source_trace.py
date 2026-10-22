@@ -65,6 +65,24 @@ def decode(data, symbols=None):
                   "sp": hex(sp), "spsr": hex(spsr), "sctlr": hex(sctlr), "tcr": hex(tcr)},
     }
     result["fault"]["registers_valid"] = exceptions > 0
+    extension, user_count, user_pid, signal_count = struct.unpack_from("<4I", data, 57776)
+    if extension not in (0, 1):
+        raise ValueError("unknown user-fault trace extension")
+    if extension:
+        upc, uesr, ufar, usp, ups, ucode = struct.unpack_from("<6Q", data, 57792)
+        signal_pid, signal, exception, reserved = struct.unpack_from("<4I", data, 57840)
+        code, address = struct.unpack_from("<2Q", data, 57856)
+        if reserved:
+            raise ValueError("unknown signal snapshot layout")
+        result["user_abort"] = {
+            "count": user_count, "pid": user_pid, "pc": hex(upc), "esr": hex(uesr),
+            "far": hex(ufar), "sp": hex(usp), "spsr": hex(ups), "mach_code": hex(ucode),
+            "far_valid": uesr >> 26 in (0x20, 0x21, 0x24, 0x25) and not (uesr & 0x400),
+        }
+        result["user_signal"] = {
+            "count": signal_count, "pid": signal_pid, "signal": signal,
+            "mach_exception": exception, "mach_code": hex(code), "mach_address": hex(address),
+        }
     if symbols and (pc or panic_caller):
         entries = []
         for line in Path(symbols).read_text().splitlines():

@@ -50,6 +50,7 @@ def main():
         "sdk_version": subprocess.check_output(
             ["xcrun", "--sdk", "iphoneos", "--show-sdk-version"], text=True).strip(),
         "wire_version": 1, "wire_bytes": 65536,
+        "user_fault_extension": 1,
         "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
         "sources": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                     for p in (root / "diagnostics").iterdir() if p.is_file()},

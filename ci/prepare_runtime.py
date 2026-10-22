@@ -69,7 +69,8 @@ if trace_match:
                  "    (output / 'chiron-trace.bin').write_bytes(trace_data)\n"
                  "    report['chiron_trace_file'] = 'chiron-trace.bin'\n")
     replace_once(probe, "for fallback_name in ('_panic', '_panic_with_options'):\n",
-                 "for fallback_name in (() if args.break_symbol == '_chiron_trace_fault_checkpoint'\n"
+                 "for fallback_name in (() if args.break_symbol in ('_chiron_trace_fault_checkpoint',\n"
+                 "                                                   '_chiron_trace_panic_checkpoint')\n"
                  "                      else ('_panic', '_panic_with_options')):\n")
 
 
@@ -94,6 +95,10 @@ def main():
         replace_once(scripts / filename, "'-target', 'arm64-apple-ios17.0',",
                      "'-target', 'arm64-apple-ios17.0', '-march=armv8-a', '-mno-outline-atomics',")
     probe = scripts / "probe-darwinboot-xnu.py"
+    replace_once(probe, "user_requests = {}\nif args.native_user:\n",
+                 "user_requests = {}\n"
+                 "# Fatal init tests stop in the kernel after the process begins exiting.\n"
+                 "if args.native_user and args.break_symbol != '_chiron_trace_panic_checkpoint':\n")
     replace_once(probe,
                  "user_inspections = [('_results', 32), ('_user_page_size', 8), ('_old_length', 8)]",
                  "user_inspections = [('_results', 32), ('_user_page_size', 8), ('_old_length', 8), "

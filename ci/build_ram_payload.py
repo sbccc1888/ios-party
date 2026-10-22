@@ -44,8 +44,14 @@ def require_runtime(directory):
             or selftest.get("child_pid", 0) <= 1
             or selftest.get("wait_pid") != selftest.get("child_pid")
             or selftest.get("wait_status") != 37 << 8
+            or selftest.get("checkpoint_stack_aligned") is not True
+            or selftest.get("stack_alignment_check_enabled") is not True
         ):
             raise ValueError("the complete user selftest was not observed")
+        checkpoint_sp = int(selftest.get("checkpoint_sp", "0"), 16)
+        sctlr = int(selftest.get("sctlr_el1", "0"), 16)
+        if not checkpoint_sp or checkpoint_sp & 15 or not sctlr & 16:
+            raise ValueError("user stack alignment/SA0 qualification is missing or inconsistent")
         for filename in ("root.img", "child.macho"):
             data = (directory / filename).read_bytes()
             if hashlib.sha256(data).hexdigest() != report.get(filename + "_sha256"):

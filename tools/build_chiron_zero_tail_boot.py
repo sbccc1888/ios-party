@@ -70,6 +70,8 @@ def source_runtime_proof(directory, volume):
         raise ValueError("source trace runtime/fault qualification is missing or mismatched")
     if runtime.get("user_selftest") and proof.get("user_selftest") != runtime["user_selftest"]:
         raise ValueError("source trace qualification does not match the observed user selftest")
+    if build.get("user_fault_extension") == 1 and not proof.get("user_sigbus_fault_observed"):
+        raise ValueError("the user SIGBUS/panic observation channel has not passed")
     fat = RamFat32(volume)
     payloads = [
         ("kernel.macho", "kernel.macho"), ("kernel.macho.adt", "kernel.macho.adt"),

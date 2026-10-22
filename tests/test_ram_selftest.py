@@ -68,7 +68,7 @@ class ContainerTests(unittest.TestCase):
 class Arm64Fixture:
     """Runs signed image instructions against explicit synthetic syscall answers."""
 
-    def __init__(self, directory, fault=None, child=False, data=None):
+    def __init__(self, directory, fault=None, child=False, data=None, entry_sp=0x7000FF00):
         self.directory, self.fault, self.child = directory, fault, child
         name = "child.macho" if child else "launchd.macho"
         self.data = data if data is not None else (directory / name).read_bytes()
@@ -85,7 +85,7 @@ class Arm64Fixture:
             if length:
                 self.machine.mem_write(address, self.data[offset:offset + length])
         self.machine.mem_map(0x70000000, 0x10000)
-        self.machine.reg_write(REG.UC_ARM64_REG_SP, 0x7000FF00)
+        self.machine.reg_write(REG.UC_ARM64_REG_SP, entry_sp)
         self.machine.reg_write(REG.UC_ARM64_REG_PSTATE, 0)
         self.machine.hook_add(unicorn.UC_HOOK_INTR, self.svc)
         self.machine.hook_add(unicorn.UC_HOOK_CODE, self.checkpoint)
@@ -94,11 +94,20 @@ class Arm64Fixture:
         self.checkpoint_reached = False
         self.mapped = False
         self.corrupted_mapping = False
+        self.stack_memory_ops = []
 
     def value(self, name, count=1):
         return struct.unpack("<" + "Q" * count, self.machine.mem_read(self.symbols[name], count * 8))
 
     def checkpoint(self, machine, address, size, _):
+        instruction = struct.unpack("<I", machine.mem_read(address, 4))[0]
+        # Unicorn/TCG may accept SP-based pairs that hardware rejects with SA0.
+        # Enforce the architectural condition separately from emulator behavior.
+        if instruction & 0x3A000000 == 0x28000000 and (instruction >> 5) & 31 == 31:
+            stack = machine.reg_read(REG.UC_ARM64_REG_SP)
+            self.stack_memory_ops.append((address, stack))
+            if stack & 15:
+                raise AssertionError(f"SP-based pair at {address:#x} with misaligned SP={stack:#x}")
         if not self.child and address == self.symbols["_checkpoint"]:
             self.checkpoint_reached = True
             machine.emu_stop()
@@ -288,6 +297,23 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(fixture.child_exit, 37)
         self.assertEqual(fixture.waits, 2)
         self.assertFalse(fixture.mapped)
+
+    @unittest.skipUnless(unicorn, "Unicorn required for instruction execution")
+    def test_darwin_entry_stack_is_aligned_before_any_stack_access(self):
+        # The actual XNU/QEMU report has SP=0x16fdffe08 at static entry/return.
+        # argc/argv are not a C call frame; do not assume their SP is 16-aligned.
+        for residue in (0, 8):
+            with self.subTest(entry_sp_mod16=residue):
+                entry_sp = 0x7000FF00 + residue
+                fixture = Arm64Fixture(self.directory, entry_sp=entry_sp)
+                fixture.machine.mem_write(entry_sp, struct.pack("<Q", 1))
+                fixture.run()
+                self.assertEqual(fixture.value("_chiron_init_status"), (2,))
+                self.assertEqual(fixture.value("_chiron_selftest_results", 8)[2:4], (15, 0))
+                self.assertTrue(fixture.stack_memory_ops)
+                self.assertTrue(all(stack % 16 == 0 for _, stack in fixture.stack_memory_ops))
+                self.assertEqual(fixture.machine.reg_read(REG.UC_ARM64_REG_SP), entry_sp & ~15)
+                self.assertEqual(bytes(fixture.machine.mem_read(entry_sp, 8)), struct.pack("<Q", 1))
 
     @unittest.skipUnless(unicorn, "Unicorn required for instruction execution")
     def test_instruction_fault_paths_cannot_qualify(self):

@@ -136,7 +136,7 @@ def apply(source, diagnostics, output):
     edit("osfmk/arm64/arm_vm_init.c", vm_init)
 
     def sleh(text, path):
-        text = '// CHIRON_SOURCE_TRACE\n#include "../kern/chiron_trace.h"\n' + text
+        text = '// CHIRON_SOURCE_TRACE\n#include "../kern/chiron_trace.h"\n#include <sys/proc.h>\n' + text
         for signature in (
             "sleh_synchronous_sp1(arm_context_t *context, uint32_t esr, vm_offset_t far __unused)\n{",
             "sleh_synchronous(arm_context_t *context, uint32_t esr, vm_offset_t far, __unused bool did_initiate_panic_lockdown)\n{",
@@ -145,9 +145,28 @@ def apply(source, diagnostics, output):
                                 "\n\tif (ESR_EC(esr) != ESR_EC_SVC_64 && ESR_EC(esr) != ESR_EC_SVC_32) {\n"
                                 "\t\tchiron_trace_exception(get_saved_state_pc(&context->ss), esr, far,\n"
                                 "\t\t    get_saved_state_sp(&context->ss), get_saved_state_cpsr(&context->ss));\n\t}", path)
-        return text
+        for code, address in (("EXC_ARM_SP_ALIGN", "sp"), ("EXC_ARM_DA_ALIGN", "pc")):
+            anchor = f"\tcodes[0] = {code};\n\tcodes[1] = get_saved_state_{address}(ss);"
+            text = replace_once(text, anchor, anchor +
+                                '\n\tchiron_trace_user_abort((unsigned)proc_selfpid(), get_saved_state_pc(ss),\n'
+                                '\t    get_saved_state_esr(ss), get_saved_state_far(ss),\n'
+                                f'\t    get_saved_state_sp(ss), get_saved_state_cpsr(ss), {code});', path)
+        anchor = "\tboot_progress_user_abort(state, esr, fault_addr);"
+        return replace_once(text, anchor,
+                            '\tchiron_trace_user_abort((unsigned)proc_selfpid(), get_saved_state_pc(state),\n'
+                            '\t    esr, fault_addr, get_saved_state_sp(state), get_saved_state_cpsr(state), codes[0]);\n'
+                            + anchor, path)
 
     edit("osfmk/arm64/sleh.c", sleh)
+
+    def user_signal(text, path):
+        text = '// CHIRON_SOURCE_TRACE\n#include "../../osfmk/kern/chiron_trace.h"\n' + text
+        anchor = "\t\tthreadsignal(thread, ux_signal, code, TRUE);"
+        return replace_once(text, anchor,
+                            '\t\tchiron_trace_signal((unsigned)proc_pid(p), (unsigned)ux_signal,\n'
+                            '\t\t    (unsigned)exception, code, subcode);\n' + anchor, path)
+
+    edit("bsd/uxkern/ux_exception.c", user_signal)
 
     def panic(text, path):
         text = '// CHIRON_SOURCE_TRACE\n#include "chiron_trace.h"\n' + text

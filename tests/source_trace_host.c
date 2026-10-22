@@ -65,6 +65,9 @@ int main(int argc, char **argv) {
     chiron_trace_initializer(1, 4, 1, 0xfffffff007333000ULL, 0);
     for (unsigned i = 0; i < 270; ++i) boot_progress_stage("bounded stage journal wrap");
     assert(chiron_trace_log.event_dropped > 0);
+    chiron_trace_user_abort(1, 0x100004000ULL, 0x9200004f, 0x100000000ULL,
+                            0x16fdfff00ULL, 0, 2);
+    chiron_trace_signal(1, 10, 1, 2, 0x100000000ULL);
     for (unsigned i = 0; i < 40000; ++i) boot_progress_putc('x');
     boot_progress_putc('\n');
     assert(chiron_trace_log.text_used == CT_TEXT_BYTES && chiron_trace_log.text_dropped > 0);
@@ -95,8 +98,12 @@ int main(int argc, char **argv) {
     assert(chiron_trace_log.paints > paints);
     assert(chiron_trace_log.pc == 0xfffffff007123456ULL);
     assert(chiron_trace_log.esr == 0x96000004 && chiron_trace_log.fault_valid == 1);
-    panic_case("expected panic %d %s", 42, "source-channel");
+    panic_case("expected panic %d %s; initproc failed to start -- exit reason namespace 2 subcode 0xa",
+               42, "source-channel");
     assert(chiron_trace_log.fault_valid == 2);
+    assert(chiron_trace_log.user_abort_pc == 0x100004000ULL);
+    assert(chiron_trace_log.user_abort_count == 1);
+    assert(chiron_trace_log.signal_count == 1 && chiron_trace_log.signal_number == 10);
     assert(opens == closes && current_root == 0x1234000040000000ULL);
     for (unsigned i = 0; i < 8; ++i) {
         assert(framebuffer[i] == 0xa5a5a5a5);

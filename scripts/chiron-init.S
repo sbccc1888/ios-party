@@ -44,6 +44,10 @@ _start:
   b.cs Lfailure
   mov x20, x0
 #ifdef CHIRON_RAM_SELFTEST
+  // Darwin's argc/argv entry stack is not a C call frame. Align before BL/STP.
+  mov x9, sp
+  and x9, x9, #-16
+  mov sp, x9
   bl _chiron_run_selftests
   cbz x0, Lheartbeat
   mov x9, #-1

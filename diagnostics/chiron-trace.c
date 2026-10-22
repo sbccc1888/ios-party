@@ -53,6 +53,7 @@ static void trace_header(void) {
     chiron_trace_log.magic = CT_MAGIC;
     chiron_trace_log.version = CT_VERSION;
     chiron_trace_log.bytes = CT_BYTES;
+    chiron_trace_log.extension_version = 1;
     trace_copy(chiron_trace_log.build_id, chiron_trace_build_id, 96);
 }
 
@@ -381,6 +382,9 @@ __attribute__((noinline))
 void chiron_trace_fault_checkpoint(void) { __asm__ volatile("nop\nnop\nnop" ::: "memory"); }
 
 __attribute__((noinline))
+void chiron_trace_panic_checkpoint(void) { __asm__ volatile("nop\nnop\nnop" ::: "memory"); }
+
+__attribute__((noinline))
 void chiron_trace_console_checkpoint(void) { __asm__ volatile("nop\nnop\nnop" ::: "memory"); }
 
 void chiron_trace_exception(uint64_t pc, uint64_t esr, uint64_t far, uint64_t sp, uint64_t spsr) {
@@ -401,6 +405,63 @@ void chiron_trace_exception(uint64_t pc, uint64_t esr, uint64_t far, uint64_t sp
     chiron_trace_fault_checkpoint();
 }
 
+static void trace_user_abort_text(void) {
+    const struct chiron_trace_storage *log = &chiron_trace_log;
+    trace_text("\nLAST UNHANDLED USER ABORT PID "); trace_hex(log->user_abort_pid);
+    trace_text("\nUSER PC "); trace_hex(log->user_abort_pc);
+    trace_text("\nUSER ESR "); trace_hex(log->user_abort_esr);
+    trace_text("\nUSER FAR "); trace_hex(log->user_abort_far);
+    unsigned ec = (unsigned)(log->user_abort_esr >> 26);
+    if ((ec != 0x20 && ec != 0x21 && ec != 0x24 && ec != 0x25) ||
+        (log->user_abort_esr & 0x400))
+        trace_text(" NOT VALID FOR THIS EC");
+    trace_text("\nUSER MACH CODE "); trace_hex(log->user_abort_code);
+    trace_text("\nUSER SP "); trace_hex(log->user_abort_sp);
+    trace_text("\nUSER SPSR "); trace_hex(log->user_abort_spsr);
+    trace_char('\n');
+}
+
+static void trace_signal_text(void) {
+    const struct chiron_trace_storage *log = &chiron_trace_log;
+    trace_text("\nLAST USER SIGNAL PID "); trace_hex(log->signal_pid);
+    trace_text(" SIG "); trace_hex(log->signal_number);
+    trace_text("\nMACH EXCEPTION "); trace_hex(log->signal_exception);
+    trace_text(" CODE "); trace_hex(log->signal_code);
+    trace_text("\nMACH ADDRESS "); trace_hex(log->signal_subcode);
+    trace_char('\n');
+}
+
+void chiron_trace_user_abort(unsigned pid, uint64_t pc, uint64_t esr, uint64_t far,
+                             uint64_t sp, uint64_t spsr, uint64_t code) {
+    struct chiron_trace_storage *log = &chiron_trace_log;
+    uint64_t flags = trace_mask();
+    log->extension_version = 1;
+    ++log->user_abort_count;
+    log->user_abort_pid = pid; log->user_abort_pc = pc;
+    log->user_abort_esr = esr; log->user_abort_far = far;
+    log->user_abort_sp = sp; log->user_abort_spsr = spsr; log->user_abort_code = code;
+    if (trace_busy) { ++log->reentries; trace_restore(flags); return; }
+    trace_busy = 1;
+    trace_header();
+    trace_user_abort_text();
+    trace_leave(flags, 1);
+}
+
+void chiron_trace_signal(unsigned pid, unsigned signal, unsigned exception,
+                         uint64_t code, uint64_t subcode) {
+    struct chiron_trace_storage *log = &chiron_trace_log;
+    uint64_t flags = trace_mask();
+    log->extension_version = 1;
+    ++log->signal_count;
+    log->signal_pid = pid; log->signal_number = signal; log->signal_exception = exception;
+    log->signal_code = code; log->signal_subcode = subcode;
+    if (trace_busy) { ++log->reentries; trace_restore(flags); return; }
+    trace_busy = 1;
+    trace_header();
+    trace_signal_text();
+    trace_leave(flags, 1);
+}
+
 void chiron_trace_panic(const char *format, va_list *arguments, unsigned long caller) {
     uint64_t flags = trace_mask();
     chiron_trace_log.fault_valid = 2;
@@ -416,7 +477,20 @@ void chiron_trace_panic(const char *format, va_list *arguments, unsigned long ca
     vsnprintf(message, sizeof(message), format ? format : "(null panic format)", copy);
     va_end(copy);
     trace_text(message); trace_char('\n');
+    if (chiron_trace_log.signal_count) trace_signal_text();
+    if (chiron_trace_log.user_abort_count) trace_user_abort_text();
+    if (chiron_trace_log.exception_count) {
+        trace_text("\nLAST EXCEPTION PC "); trace_hex(chiron_trace_log.pc);
+        trace_text("\nLAST ESR "); trace_hex(chiron_trace_log.esr);
+        trace_text("\nLAST FAR "); trace_hex(chiron_trace_log.far);
+        trace_text("\nLAST SP "); trace_hex(chiron_trace_log.sp);
+        trace_text("\nLAST SPSR "); trace_hex(chiron_trace_log.spsr);
+        trace_text("\nLAST SCTLR "); trace_hex(chiron_trace_log.sctlr);
+        trace_text("\nLAST TCR "); trace_hex(chiron_trace_log.tcr);
+        trace_char('\n');
+    }
     trace_leave(flags | 0x3c0, 1);
+    chiron_trace_panic_checkpoint();
     chiron_trace_fault_checkpoint();
 #ifndef CHIRON_TRACE_HOST_TEST
     /* This observer build is a fail-stop diagnostic, so the cause stays visible. */
