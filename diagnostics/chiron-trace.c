@@ -303,10 +303,12 @@ void chiron_trace_mapping(const char *stage, uint64_t physical, uint64_t virtual
                        (unsigned long long)bytes, flags);
 }
 
-void chiron_trace_video(const char *stage, uint64_t base, unsigned width, unsigned height,
-                        unsigned stride, unsigned depth) {
-    trace_stage_format("%s BASE=%016llx W=%u H=%u ROW=%u DEPTH=%u", stage,
-                       (unsigned long long)base, width, height, stride, depth);
+void chiron_trace_video(const char *stage, uint64_t base, uint64_t width, uint64_t height,
+                        uint64_t stride, uint64_t depth) {
+    trace_stage_format("%s BASE=%016llx W=%llu H=%llu ROW=%llu DEPTH=%llu", stage,
+                       (unsigned long long)base, (unsigned long long)width,
+                       (unsigned long long)height, (unsigned long long)stride,
+                       (unsigned long long)depth);
 }
 
 void chiron_trace_init(uint64_t physical, unsigned width, unsigned height, unsigned stride,

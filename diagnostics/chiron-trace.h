@@ -93,7 +93,7 @@ void chiron_trace_use_native_vectors(void);
 void chiron_trace_console(const char *, unsigned);
 void chiron_trace_initializer(unsigned, unsigned, unsigned, uintptr_t, uintptr_t);
 void chiron_trace_mapping(const char *, uint64_t, uint64_t, uint64_t, unsigned);
-void chiron_trace_video(const char *, uint64_t, unsigned, unsigned, unsigned, unsigned);
+void chiron_trace_video(const char *, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 void chiron_trace_exception(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 void chiron_trace_panic(const char *, va_list *, unsigned long);
 void chiron_trace_fault_checkpoint(void);

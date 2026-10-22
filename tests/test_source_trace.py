@@ -93,6 +93,7 @@ class SourceTraceTests(unittest.TestCase):
         self.assertIn("host framebuffer mapping PA=000000009d400000", result["console"])
         self.assertIn("native video console bound BASE=fffffff020000000", result["console"])
         self.assertIn("W=1080 H=2160 ROW=4320 DEPTH=32", result["console"])
+        self.assertIn("W=4294968376 H=2160 ROW=4320 DEPTH=32", result["console"])
         self.assertIn("PANIC CALLER FFFFFFF007999000", result["console"])
         self.assertEqual(len(result["events"]), 256)
         self.assertGreater(result["events_dropped"], 0)

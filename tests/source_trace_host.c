@@ -86,6 +86,7 @@ int main(int argc, char **argv) {
     const char message[] = "SOURCE BUFFERED CONSOLE CAPTURE\n";
     chiron_trace_console(message, sizeof(message) - 1);
     chiron_trace_mapping("host framebuffer mapping", GOP, 0xfffffff010000000ULL, 0x8e6200, 3);
+    chiron_trace_video("host wide video fields", GOP, 0x100000438ULL, 2160, 4320, 32);
     uint64_t render_base = chiron_trace_log.render_base;
     unsigned paints = chiron_trace_log.paints;
     boot_progress_bind(0xfffffff020000000ULL, 1080, 2160, 4320, 32);
