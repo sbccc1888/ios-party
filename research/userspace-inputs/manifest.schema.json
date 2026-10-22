@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chiron explicitly supplied userspace inputs",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "files"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "ProductVersion": {"type": "string", "pattern": "^\\d+\\.\\d+(?:\\.\\d+)?$"},
+    "BuildVersion": {"type": "string", "pattern": "^\\d+[A-Za-z]\\d+[A-Za-z]?$"},
+    "source": {"type": "string"},
+    "files": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "target_path": {"type": "string", "pattern": "^/[^/].*"},
+          "kind": {"enum": ["auto", "macho", "cache", "system_version", "data"]},
+          "role": {
+            "enum": ["dyld", "launchd", "libsystem", "cache", "cache_subcache", "system_version", "support"]
+          },
+          "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+          "uuid": {"type": "string", "format": "uuid"}
+        }
+      }
+    }
+  }
+}
