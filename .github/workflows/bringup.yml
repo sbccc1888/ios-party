@@ -157,7 +157,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Compile independent UFS read-only archive
-        if: inputs.kernel_mode == 'ram-trace'
+        if: always() && inputs.kernel_mode == 'ram-trace'
         continue-on-error: true
         run: |
           python3 ci/build_chiron_ufs_readonly.py \

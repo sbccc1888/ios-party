@@ -14,6 +14,7 @@ TEST_EXIT=0
         --output build/chiron-qemu-init --timeout 180 \
         --armvirt --armcpu --nvram-proxy --require-crypto14 \
         --native-user --trust-cache build/native-user-fixture/trustcache.bundle \
+        --native-user-image build/native-user-fixture/launchd.macho \
         --native-user-ramdisk build/native-user-fixture/root.img \
         --check-commpage --qemu-ramfb --capture-qemu-screen
 ) || TEST_EXIT=$?
