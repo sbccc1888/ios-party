@@ -136,7 +136,10 @@ def apply(source, diagnostics, output):
     edit("osfmk/arm64/arm_vm_init.c", vm_init)
 
     def sleh(text, path):
-        text = '// CHIRON_SOURCE_TRACE\n#include "../kern/chiron_trace.h"\n#include <sys/proc.h>\n' + text
+        text = '// CHIRON_SOURCE_TRACE\n#include "../kern/chiron_trace.h"\n' + text
+        # Match OSFMK's existing BSD interface declarations without sys/proc.h.
+        text = replace_once(text, "#include <sys/errno.h>",
+                            "#include <sys/errno.h>\nextern int proc_selfpid(void);", path)
         for signature in (
             "sleh_synchronous_sp1(arm_context_t *context, uint32_t esr, vm_offset_t far __unused)\n{",
             "sleh_synchronous(arm_context_t *context, uint32_t esr, vm_offset_t far, __unused bool did_initiate_panic_lockdown)\n{",
