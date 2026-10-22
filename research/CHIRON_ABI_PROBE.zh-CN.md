@@ -7,6 +7,13 @@ XNU/QEMU 完成此默认探针，`required_mask=passed_mask=127`、
 `dist/foundation-attempt-39780009249/qemu-abi/gdb-stop.json` 和
 `abi-verification.json`，不记为整个基础任务作业成功。未取得实机资格。
 
+后续运行 `39782971298` 已完成整组基础任务资格：
+正常内核的默认 ABI 探针、新 RAMFS 实验内核的旧根卷四项自检，以及
+CHRAMFS 嵌套文件映射探针均通过。两个 ABI 探针均为 mask=127、
+failure=0、两次心跳；结果由原始调试结构、载荷哈希及 POST 记录独立复核。
+参见 `dist/foundation-39782971298/local-verification.json`。
+当前仍未验证 pthread/TLS 库、写入只读映射的拒绝、unmap 后访问的拒绝或实机运行。
+
 该探针用于原 RAM 自检以外的接口诊断。它拥有独立的启动文件、结果 ABI、构建报告和验证器，不替换现有 `chiron-init.S` 或四项 selftest。主集成流程负责把它放入单独的 QEMU 资格，不放入原手机镜像。
 
 ## 构建和观察接口

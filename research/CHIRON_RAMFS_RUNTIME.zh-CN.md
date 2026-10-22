@@ -1,5 +1,13 @@
 # CHRAMFS 独立运行 fixture
 
+主任务最终结果：云运行 `39782971298` 已在独立 RAMFS 内核中运行本 fixture，
+取得新目录根卷挂载、嵌套文件完整只读映射、mask=127 和两次心跳。
+根卷 114688 字节，子文件 51472 字节、跨 13 页，本次实际文件字节和为 90540。
+独立内核的 POST 正反例、旧 N4KROOT 四项回归也通过。
+原始记录在 `dist/foundation-39782971298/ramfs-runtime/`，
+本地独立复核在同产物目录上一级的 `local-verification.json`。
+下文是 agent 初次交付 fixture 时的范围与记录，后续运行结果不等于实机通过。
+
 日期：2026-10-22。本扩展仅新增以下四个文件，不修改已有 RAMFS overlay、
 正常 selftest、ABI probe 本体、通用 validator、主 CI、configs 或手机镜像：
 

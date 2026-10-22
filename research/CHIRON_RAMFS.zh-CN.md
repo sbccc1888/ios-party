@@ -3,7 +3,10 @@
 主任务追加记录：首轮云运行 `39780009249` 的真实 XNU 编译发现挂载结构体
 16408 字节超过 16 KiB typed allocation 上限。节点指针表已改为独立分配，
 挂载结构与节点表各有静态大小守卫；宿主分配适配器新增同等限制和第三处分配失败覆盖，
-原 12 项测试复测通过。真实编译及挂载运行资格仍需后续云端结果。
+原 12 项测试复测通过。后续主任务云运行 `39782971298` 已完成真实 XNU
+编译、独立重链接、新目录根卷挂载及嵌套文件全量映射读取；
+旧 N4KROOT 回归也通过。原始证据与边界见
+[并行集成记录](CHIRON_PARALLEL_FOUNDATION.zh-CN.md)。
 
 日期：2026-10-22。任务 A 仅新增 `tools/chiron_ramfs.py`、
 `ci/apply_chiron_ramfs.py`、`package/ChironRamfs/`、`tests/test_ramfs.py`、
@@ -26,8 +29,8 @@ configs、README、RUNTIME_STATUS。没有内核全量构建、云任务、设�
 | Host | Python builder/decoder 与生产 C parser 的独立验证；C 不由 Python 结果代替 |
 | Host overlay | 编译实际变换后的 mockfs 三个 `.c`，连接声明清楚的宿主 XNU API 适配层；执行真实 overlay 的挂载分流、目录/vnode 查找、getattr、readdir、read/blockmap 调用及清理逻辑；ASan/UBSan 检查 |
 | ARM64 parser compile | `arm64-apple-darwin -ffreestanding` 编译公共解析器；不等于整个 mockfs 已通过真实 XNU 头文件编译 |
-| XNU archive compile | 由主 agent 的独立可选 archive builder 另行资格验证，本任务不提供成功声明 |
-| QEMU / hardware | 未运行；真实 mount、UBC、VM pagein、文件 mmap/执行、设备授权/生命周期均待运行资格 |
+| XNU archive compile | 初次 agent 交付时未验证；后续主任务在运行 39782971298 取得三个真实 XNU 翻译单元编译资格 |
+| QEMU / hardware | 初次 agent 交付时未运行；后续主任务已取得新根卷挂载、嵌套文件映射读回和旧根卷回归的 QEMU 证据；硬件未测，通用并发/生命周期仍未充分验证 |
 
 宿主适配层的 `cluster_read` 用 fixture 字节测试精确长度和真实 blockmap
 调用契约，不包含 XNU VM/cache 实现。`cluster_pagein` 明确返回 `EIO`，
