@@ -54,6 +54,19 @@ Lheartbeat:
   mov x0, x20
   adrp x1, Lmessage@PAGE
   add x1, x1, Lmessage@PAGEOFF
+#ifdef CHIRON_RAM_SELFTEST
+  adrp x9, _chiron_selftest_results@PAGE
+  add x9, x9, _chiron_selftest_results@PAGEOFF
+  ldr x10, [x9, #16]
+  cmp x10, #15
+  b.ne Lheartbeat_failed
+  ldr x10, [x9, #24]
+  cbz x10, Lheartbeat_message
+Lheartbeat_failed:
+  adrp x1, Lmessage_failed@PAGE
+  add x1, x1, Lmessage_failed@PAGEOFF
+Lheartbeat_message:
+#endif
   mov x2, #(Lmessage_end-Lmessage)
   mov x16, #4
   svc #0x80
@@ -125,9 +138,19 @@ Ltimeval:
 Lconsole:
   .asciz "/dev/console"
 Lmessage:
-  .ascii "CHIRON RAM init: PID 1, 4K ABI, heartbeat\n"
+  .ascii "CHIRON RAM init: PID 1, 4K ABI, heartbeat"
+#ifdef CHIRON_RAM_SELFTEST
+  .ascii " SELFTEST PASS"
+#endif
+  .ascii "\n"
 Lmessage_end:
 
 #ifdef CHIRON_RAM_SELFTEST
+Lmessage_failed:
+  .ascii "CHIRON RAM init: PID 1, 4K ABI, heartbeat SELFTEST FAIL\n"
+Lmessage_failed_end:
+  .if (Lmessage_failed_end-Lmessage_failed) != (Lmessage_end-Lmessage)
+  .error "selftest heartbeat variants must have equal write lengths"
+  .endif
 #include "chiron-selftest-main.S"
 #endif

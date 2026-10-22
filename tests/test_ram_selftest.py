@@ -283,6 +283,8 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(fixture.sleeps, 2)
         self.assertEqual(fixture.child_calls, [20, 39, 5, 4, 6, 1])
         self.assertIn(b"CHILD PASS", fixture.output)
+        self.assertEqual(fixture.output.count(b"heartbeat SELFTEST PASS"), 2)
+        self.assertNotIn(b"heartbeat SELFTEST FAIL", fixture.output)
         self.assertEqual(fixture.child_exit, 37)
         self.assertEqual(fixture.waits, 2)
         self.assertFalse(fixture.mapped)
@@ -307,6 +309,8 @@ class BuildTests(unittest.TestCase):
                 self.assertEqual(fixture.value("_chiron_init_status"), ((1 << 64) - 1,))
                 self.assertFalse(fixture.checkpoint_reached)
                 self.assertIn(b"CHIRON SELFTEST FAIL", fixture.output)
+                self.assertIn(b"heartbeat SELFTEST FAIL", fixture.output)
+                self.assertNotIn(b"heartbeat SELFTEST PASS", fixture.output)
                 self.assertGreaterEqual(fixture.sleeps, 3)
                 if fault.startswith("child_"):
                     self.assertEqual(fixture.child_exit, 111)

@@ -121,12 +121,14 @@ CHIRON SELFTEST START independent child
 CHIRON SELFTEST CHILD PASS pid>1 ppid=1 exit=37
 CHIRON SELFTEST PASS independent exec exit=37
 CHIRON SELFTEST PASS wait/reap ECHILD
-CHIRON RAM init: PID 1, 4K ABI, heartbeat
-CHIRON RAM init: PID 1, 4K ABI, heartbeat
+CHIRON RAM init: PID 1, 4K ABI, heartbeat SELFTEST PASS
+CHIRON RAM init: PID 1, 4K ABI, heartbeat SELFTEST PASS
 ```
 
 CHILD 日志与 START 的相对顺序受调度影响；START 不表示 exec PASS。
 屏幕文字是辅助观察，最终门禁必须读取结构化结果、绑定产物哈希。
+自检失败后的心跳持续附带 `SELFTEST FAIL`，成功时根据完整通过位和零失败阶段
+附带 `SELFTEST PASS`；仅有基础心跳不能被误记为新增自检通过。
 
 ## 结构化 ABI
 
