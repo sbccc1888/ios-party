@@ -68,14 +68,22 @@ def source_runtime_proof(directory, volume):
         or build.get("kernel_binary_patching") is not False
     ):
         raise ValueError("source trace runtime/fault qualification is missing or mismatched")
+    if runtime.get("user_selftest") and proof.get("user_selftest") != runtime["user_selftest"]:
+        raise ValueError("source trace qualification does not match the observed user selftest")
     fat = RamFat32(volume)
-    for filename, target in (
+    payloads = [
         ("kernel.macho", "kernel.macho"), ("kernel.macho.adt", "kernel.macho.adt"),
         ("launchd.macho", "launchd.macho"), ("trustcache.bundle", "kernel.macho.trustcache"),
-    ):
+    ]
+    if runtime.get("user_selftest"):
+        payloads.append(("root.img", "root.img"))
+    for filename, target in payloads:
         if fat.read("EFI/UniXNU/Payloads/" + target) != (directory / filename).read_bytes():
             raise ValueError("source runtime FAT payload mismatch: " + filename)
-    if b"chiron-trace-test" in fat.read("EFI/UniXNU/unixnu.toml"):
+    config = fat.read("EFI/UniXNU/unixnu.toml")
+    if runtime.get("user_selftest") and b'initrd = "Payloads/root.img"' not in config:
+        raise ValueError("selftest phone image must use the qualified multi-file RAM root")
+    if b"chiron-trace-test" in config:
         raise ValueError("fault-injection arguments must never enter the phone image")
     return {"build_id": build["build_id"], "runtime": runtime, "source_trace_tests": proof}
 

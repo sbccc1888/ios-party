@@ -97,7 +97,11 @@ def main():
     replace_once(probe,
                  "user_inspections = [('_results', 32), ('_user_page_size', 8), ('_old_length', 8)]",
                  "user_inspections = [('_results', 32), ('_user_page_size', 8), ('_old_length', 8), "
-                 "('_chiron_heartbeats', 8), ('_chiron_init_status', 8)]")
+                 "('_chiron_heartbeats', 8), ('_chiron_init_status', 8)]\n"
+                 "    if '_chiron_selftest_results' in user_addresses:\n"
+                 "        user_inspections.append(('_chiron_selftest_results', 64))\n"
+                 "    if '_chiron_selftest_diagnostics' in user_addresses:\n"
+                 "        user_inspections.append(('_chiron_selftest_diagnostics', 40))")
     observer = scripts / "qemu-entry/gdb-stop.py"
     text = observer.read_text()
     cpu_expression = "'cortex-a710' if args.qemu_accel == 'tcg' else 'host'"

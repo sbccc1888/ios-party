@@ -13,7 +13,8 @@ def main():
     loader = unittest.TestLoader()
     # The source pipeline does not rebuild/recompress DarwinBoot firmware volumes
     # or use the archived kernel/handoff binary insertion tools.
-    for name in ("test_bringup", "test_entry_probe", "test_source_trace"):
+    for name in ("test_bringup", "test_entry_probe", "test_source_trace",
+                 "test_runtime_selftest_gate", "test_ram_selftest", "test_ufs_readonly"):
         suite.addTests(loader.loadTestsFromName(name))
     for name in (
         "test_fat_same_size_replacement_preserves_metadata_and_padding",

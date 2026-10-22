@@ -14,6 +14,7 @@ TEST_EXIT=0
         --output build/chiron-qemu-init --timeout 180 \
         --armvirt --armcpu --nvram-proxy --require-crypto14 \
         --native-user --trust-cache build/native-user-fixture/trustcache.bundle \
+        --native-user-ramdisk build/native-user-fixture/root.img \
         --check-commpage --qemu-ramfb --capture-qemu-screen
 ) || TEST_EXIT=$?
 for name in gdb-stop.json gdb-failure.json gdb-uart.log gdb-stderr.log chiron-trace.bin screen.png; do
@@ -38,7 +39,7 @@ fi
 if [ "$TEST_EXIT" -ne 0 ]; then
     exit "$TEST_EXIT"
 fi
-python3 "$ROOT/ci/validate_runtime.py" --tree "$TREE" --output "$ROOT/dist/ram-init/runtime-test.json"
+python3 "$ROOT/ci/validate_runtime.py" --tree "$TREE" --output "$ROOT/dist/ram-init/runtime-test.json" --require-selftest
 cp "$TREE/build/chiron-qemu-init/gdb-stop.json" "$ROOT/dist/ram-init/qemu-observation.json"
 cp "$TREE/build/chiron-qemu-init/gdb-uart.log" "$ROOT/dist/ram-init/qemu-uart.log"
 cp "$TREE/build/corecrypto-2023/post-test.json" "$ROOT/dist/ram-init/"

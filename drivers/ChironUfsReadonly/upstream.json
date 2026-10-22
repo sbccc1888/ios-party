@@ -1,0 +1,12 @@
+{
+  "unixnu_commit": "7b52e7968c76453cdc18b5aa174fc368d5293b91",
+  "adapted": "NativeUfs UTRD/UCD/PRDT layout, response validation, single-slot completion and quarantine rules. Board-specific initialization, SMMU takeover, power commands, write/store/root-publication code are excluded.",
+  "files": {
+    "drivers/NativeUfs/RootCommands.h": "014039b0e5d8313eb505e2b570773595cd40d08f6e92948d3ab15343671bbff1",
+    "drivers/NativeUfs/RootTransportLayout.h": "77699362f09e103ceda0d5f216d0be7749cdc1e88c6143ddd15ceb11dfd42e91",
+    "drivers/NativeUfs/TransferPoll.h": "742df51cdce6d06df6bf93294176f01305c9d1359c8ffdfb99daff7b76a1ece3",
+    "drivers/NativeUfs/NativeUfs.cpp": "3fbd24df8e9517b30d369fe64f4133aa6fb05bd90577d220dab8c58c0f5232f4",
+    "scripts/build-xnu-4k-baseline.sh": "3486867d8c639eb10d31be16e875dbbdbb1d27afd97aedbb8ba930f0093c6852",
+    "patches/xnu/native-aes-personality.patch": "02fe52c87a6bd801e602d03b54ce51de1362a2f2c6f75f5fc08122d3901aefff"
+  }
+}

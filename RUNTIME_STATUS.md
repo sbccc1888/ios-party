@@ -1,8 +1,8 @@
 # RAM init 阶段
 
-本阶段目标已在 Cortex-A53 QEMU 中通过：单核、4 KiB XNU 启动自有静态 PID 1，完成真实的 PID/页大小检查、控制台写入和两次定时等待。2026-10-22，用户照片 `IMG_20261022_093457.jpg` 已显示 `XNU STAGE 17`，确认诊断内核中的原始 `arm_vm_init` 返回。尚无实机 PID 1 心跳、完整 iOS 用户态或明确故障原因的证据。后续停止零散二进制插桩，转向 [固定基线源码日志](research/CHIRON_SOURCE_TRACE.zh-CN.md)；既有诊断结果保留在本文。
+本阶段已取得实机最小运行证据：2026-10-22，用户照片 `IMG_20261022_162407.jpg` 显示当前源码诊断构建及多轮自有 PID 1 心跳。对照 init 源码，支持 PID=1、页大小=4096 的检查通过、控制台写入和多轮定时等待返回。此前对应路径已在 Cortex-A53 QEMU 取得原始寄存器及计数资格。实机照片不证明长期稳定性、完整 iOS 用户态或此前停滞的精确根因。[固定基线源码日志](research/CHIRON_SOURCE_TRACE.zh-CN.md) 为当前主线，既有诊断结果保留在本文。
 
-最新源码诊断成品为 `dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img`。云端完整资格和本地交付复核通过，修正外来板级 panic 地址并覆盖控制台内部路径；仍待实机临时启动。上一版照片的最后可见日志为 `PE_create_console() enter`，详见文末。
+最新源码诊断成品为 `dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img`。云端完整资格、本地交付复核及实机多轮心跳观察均已取得。上一版照片的最后可见日志为 `PE_create_console() enter`；新版本已继续执行至用户态 init，详见文末。刷写、临时启动和重启由用户操作，助手不执行这些设备命令。
 
 ## 已有观察
 
@@ -240,3 +240,11 @@ fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/boot-controls-24m/chir
 云构建及打包 `39745321134` 已全部成功，源码提交 `783cc7e68f24969bd38134ef4bdd28836dbc4b39`。新增早期原始记录包含 `panic DT region absent; no memory accessed`、`screen map returned`、`gc_initialize returned` 和 `0x6d5 PE_create_console() returned`；正常运行含两次真实 init 心跳，POST 正反例和故障捕获继续通过。实际 QEMU 屏幕已目视核对。
 
 新镜像为 `dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img`，26,697,728 字节，SHA-256 为 `4d24f9f96c021dba3984bae40d9db61bca287c4f22a4bdb7f59ab48a7477ef0a`；内核 SHA-256 为 `4fdd24494e423e52bf888bcc96e0f4036363caabd45d357496142b89778213f9`。本地重解码原始 console/normal 缓冲，核对容器 SHA-1、完整镜像 SHA-256、重建 FAT、四个载荷哈希、内核 POST HMAC、构建 ID 和无注入参数，全部通过，报告为同目录 `local-verification.json`。新成品反汇编也确认已编译设备树分支。未检测到 fastboot 设备，未自动启动手机；未取得新实机结论。
+
+### 实机自有 PID 1 多轮心跳
+
+2026-10-22，用户自行操作设备后提供 `IMG_20261022_162407.jpg`，顶部可读构建 ID 为 `CT-39745321134-1-783CC7E68F24`，并显示多行 `CHIRON RAM INIT: PID 1, 4K ABI, HEARTBEAT`。照片文件 SHA-256 为 `9526a8e6141c385dc66e7065f975050fcfa3c4dbe70e44a492bbe309732efefb`。照片中的编号与已校验交付一致，但照片不独立验证设备上镜像的完整哈希。
+
+`scripts/chiron-init.S` 仅在 `getpid` 返回 1、页大小查询返回 4096、`/dev/console` 打开成功后进入心跳写入；每次完整写入后执行一秒 `select` 超时等待，返回成功才继续。多轮可见心跳支持最小 XNU 用户态 PID 1 和定时等待续接在实机工作，已越过此前控制台入口的最后可见停点。照片未给出精确等待间隔、IRQ 计数或连续运行总时长，不将 QEMU 的计数移记为实机结果。
+
+本轮可记为“实机最小 4 KiB XNU + 自有 PID 1 心跳通过”。完整 iOS 用户态、长期稳定性和原生外设功能仍需分别验证；这次通过也不单独确定旧版停滞的精确 PC 或硬件故障机制。云端 manifest 与 `local-verification.json` 保持构建时记录，实机证据另记于本文。用户明确由其负责刷写；后续临时启动和重启也交由用户操作。

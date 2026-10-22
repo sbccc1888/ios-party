@@ -33,6 +33,23 @@ def require_runtime(directory):
         digest = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
         if digest != report.get(key):
             raise ValueError(f"runtime artifact hash mismatch: {filename}")
+    selftest = report.get("user_selftest")
+    has_selftest = (directory / "selftest-build.json").exists() or "root.img_sha256" in report
+    if selftest or has_selftest:
+        if not isinstance(selftest, dict) or (
+            selftest.get("schema") != 1 or selftest.get("required_mask") != 15
+            or selftest.get("passed_mask") != 15
+            or not all(selftest.get(name) is True for name in (
+                "file_read_passed", "anonymous_mmap_passed", "independent_exec_passed", "child_reaped"))
+            or selftest.get("child_pid", 0) <= 1
+            or selftest.get("wait_pid") != selftest.get("child_pid")
+            or selftest.get("wait_status") != 37 << 8
+        ):
+            raise ValueError("the complete user selftest was not observed")
+        for filename in ("root.img", "child.macho"):
+            data = (directory / filename).read_bytes()
+            if hashlib.sha256(data).hexdigest() != report.get(filename + "_sha256"):
+                raise ValueError(f"selftest artifact hash mismatch: {filename}")
     return report
 
 
@@ -65,6 +82,10 @@ def main():
         "kernel.macho": "kernel.macho", "kernel.macho.adt": "kernel.macho.adt",
         "launchd.macho": "launchd.macho", "trustcache.bundle": "kernel.macho.trustcache",
     }
+    root_name = "launchd.macho"
+    if observed.get("user_selftest"):
+        mapping["root.img"] = "root.img"
+        root_name = "root.img"
     for source, target in mapping.items():
         subprocess.run(["mcopy", "-i", str(image), str(args.runtime / source),
                         "::/EFI/UniXNU/Payloads/" + target], check=True)
@@ -83,7 +104,7 @@ id = "chiron-ram-init"
 title = {json.dumps(title)}
 type = "xnu"
 path = "Payloads/kernel.macho"
-initrd = "Payloads/launchd.macho"
+initrd = "Payloads/{root_name}"
 args = "-v serial=3 debug=0x14e cpus=1 rd=md0 keepsyms=1 kt_fixed_zones=120"
 [[entry]]
 id = "firmware"

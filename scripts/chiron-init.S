@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 // Own static Darwin PID 1: verify the ABI, then write and sleep repeatedly.
 .text
+.p2align 2
 .global _start, _checkpoint
 _start:
   adrp x19, _results@PAGE
@@ -42,6 +43,13 @@ _start:
   svc #0x80
   b.cs Lfailure
   mov x20, x0
+#ifdef CHIRON_RAM_SELFTEST
+  bl _chiron_run_selftests
+  cbz x0, Lheartbeat
+  mov x9, #-1
+  adrp x10, _chiron_init_status@PAGE
+  str x9, [x10, _chiron_init_status@PAGEOFF]
+#endif
 Lheartbeat:
   mov x0, x20
   adrp x1, Lmessage@PAGE
@@ -74,6 +82,12 @@ Lheartbeat:
   str x9, [x21]
   cmp x9, #2
   b.lo Lheartbeat
+#ifdef CHIRON_RAM_SELFTEST
+  adrp x10, _chiron_init_status@PAGE
+  ldr x9, [x10, _chiron_init_status@PAGEOFF]
+  cmn x9, #1
+  b.eq Lheartbeat
+#endif
   mov x9, #2
   adrp x10, _chiron_init_status@PAGE
   str x9, [x10, _chiron_init_status@PAGEOFF]
@@ -113,3 +127,7 @@ Lconsole:
 Lmessage:
   .ascii "CHIRON RAM init: PID 1, 4K ABI, heartbeat\n"
 Lmessage_end:
+
+#ifdef CHIRON_RAM_SELFTEST
+#include "chiron-selftest-main.S"
+#endif

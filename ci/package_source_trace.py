@@ -60,6 +60,10 @@ def main():
         "overlay": json.loads((args.runtime / "chiron-source-overlay.json").read_text()),
         "hardware_tested": False, "failure_cause_identified": False,
     }
+    selftest = args.runtime / "selftest-build.json"
+    if selftest.exists():
+        manifest["user_selftest_build"] = json.loads(selftest.read_text())
+        shutil.copyfile(selftest, args.output / selftest.name)
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     shutil.copytree(args.runtime / "source-trace-tests", args.output / "qemu-logs")
     shutil.copyfile(args.runtime / "chiron-trace.bin", args.output / "qemu-logs/normal.bin")

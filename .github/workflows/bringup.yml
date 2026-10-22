@@ -156,6 +156,20 @@ jobs:
       - run: bash ci/build-kernel.sh
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Compile independent UFS read-only archive
+        if: inputs.kernel_mode == 'ram-trace'
+        continue-on-error: true
+        run: |
+          python3 ci/build_chiron_ufs_readonly.py \
+            --tree "$RUNNER_TEMP/chiron-kernel/chiron/tree" \
+            --upstream "$RUNNER_TEMP/chiron-sources/unixnu" \
+            --output dist/ufs-readonly
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && inputs.kernel_mode == 'ram-trace'
+        with:
+          name: chiron-ufs-readonly
+          path: dist/ufs-readonly/
+          retention-days: 7
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

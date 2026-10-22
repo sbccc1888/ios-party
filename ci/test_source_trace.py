@@ -109,6 +109,7 @@ def main():
         "source_entry_and_mmu_observed": True, "native_framebuffer_mapping_observed": True,
         "panic_reason_observed": True, "data_abort_pc_esr_far_observed": True,
         "console_initialization": console_proof,
+        "user_selftest": qualification.get("user_selftest"),
         "faults": reports, "hardware_observed": False,
     }, indent=2) + "\n")
 
