@@ -83,6 +83,8 @@ int main(int argc, char **argv) {
     assert(chiron_trace_log.reentries && chiron_trace_log.far == 0x1000);
     chiron_trace_exception(0xfffffff007123456ULL, 0x96000004, 0x1000,
                            0xfffffff007ffff00ULL, 0x600003c5);
+    const char message[] = "SOURCE BUFFERED CONSOLE CAPTURE\n";
+    chiron_trace_console(message, sizeof(message) - 1);
     assert(chiron_trace_log.pc == 0xfffffff007123456ULL);
     assert(chiron_trace_log.esr == 0x96000004 && chiron_trace_log.fault_valid == 1);
     panic_case("expected panic %d %s", 42, "source-channel");

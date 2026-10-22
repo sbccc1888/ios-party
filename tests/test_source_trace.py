@@ -43,6 +43,7 @@ class SourceTraceTests(unittest.TestCase):
         self.assertGreaterEqual(result["exception_count"], 2)
         self.assertEqual(int(result["fault"]["far"], 16), 0x1000)
         self.assertIn("expected panic 42 source-channel", result["console"])
+        self.assertIn("SOURCE BUFFERED CONSOLE CAPTURE", result["console"])
         self.assertIn("PANIC CALLER FFFFFFF007999000", result["console"])
         self.assertEqual(len(result["events"]), 256)
         self.assertGreater(result["events_dropped"], 0)

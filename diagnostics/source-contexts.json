@@ -8,6 +8,7 @@
     "osfmk/arm64/arm_vm_init.c": "372d0449a312dc4391aa1e6b5adee35dd2a87b4c7beb0000954a3d84808493e3",
     "osfmk/arm64/sleh.c": "10638ba610f21870182dd4b9ff6f5503fc320de5073bf7c1cfbef64b0a4c124a",
     "osfmk/kern/debug.c": "03300886ebf0ccf6159756491ae6af0e7cef031df70e15c9de71d8aea8ff42a5",
-    "osfmk/kern/startup.c": "5022d12d5947893668ad444dd1cf5afad24cdb65cf5ba090beb8e9e8983cf3b4"
+    "osfmk/kern/startup.c": "5022d12d5947893668ad444dd1cf5afad24cdb65cf5ba090beb8e9e8983cf3b4",
+    "osfmk/console/serial_console.c": "026aae3bd254250f6a74f1ab75668f6e3c225346e49cdec992a8e2165a26d4c9"
   }
 }

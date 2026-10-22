@@ -90,6 +90,7 @@ extern const char chiron_trace_build_id[96];
 void chiron_trace_init(uint64_t, unsigned, unsigned, unsigned, unsigned, uint64_t, uint64_t);
 void chiron_trace_native_map(void);
 void chiron_trace_use_native_vectors(void);
+void chiron_trace_console(const char *, unsigned);
 void chiron_trace_initializer(unsigned, unsigned, unsigned, uintptr_t, uintptr_t);
 void chiron_trace_exception(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 void chiron_trace_panic(const char *, va_list *, unsigned long);

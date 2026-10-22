@@ -35,6 +35,8 @@ def main():
         raise ValueError("normal source entry/MMU PCs are missing")
     if normal["panic_count"]:
         raise ValueError("normal init run contains a panic")
+    if normal["console"].count("CHIRON RAM init: PID 1, 4K ABI, heartbeat") < 2:
+        raise ValueError("the actual PID 1 console writes were not captured twice")
     if normal["mapping_mode"] != 2 or not normal["native_paints"] or not any(
         "load_init_program" in event["text"] for event in normal["events"]
     ):
@@ -86,6 +88,10 @@ def main():
         else:
             if observed["fault"]["kind"] != 1 or int(observed["fault"]["far"], 16) != 0x1000:
                 raise ValueError("real data-abort FAR was not captured")
+            if (observed["fault"].get("nearest_symbol") != "_chiron_trace_test"
+                    or not any("explicit diagnostic data-abort injection requested" in event["text"]
+                               for event in observed["events"])):
+                raise ValueError("data abort must originate from the requested source injection")
             if not int(observed["fault"]["pc"], 16) or int(observed["fault"]["esr"], 16) >> 26 not in (0x24, 0x25):
                 raise ValueError("data-abort PC/ESR is missing or wrong")
         reports[name] = observed["fault"]

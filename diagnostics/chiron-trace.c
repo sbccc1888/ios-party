@@ -218,8 +218,7 @@ static void trace_draw(void) {
         /* A bounded last page is enough for display; the full ring remains exportable. */
         if (reset && count > cols * (rows - 1)) count = cols * (rows - 1);
         unsigned start = (log->text_write + CT_TEXT_BYTES - count) % CT_TEXT_BYTES;
-        uint32_t color = log->fault_valid >= 2 ? 0xff6060 :
-                         log->fault_valid == 1 ? 0xffd060 : 0xffffff;
+        uint32_t color = log->fault_valid >= 2 ? 0xff6060 : 0xffffff;
 #ifdef CHIRON_TRACE_HOST_TEST
         volatile uint32_t *pixels = ct_host_pixels(base);
 #else
@@ -348,6 +347,22 @@ void boot_progress_putc(char c) {
     trace_leave(flags, c == '\n');
 }
 
+void chiron_trace_console(const char *text, unsigned size) {
+    while (size) {
+        unsigned chunk = size > 256 ? 256 : size;
+        uint64_t flags;
+        if (!trace_enter(&flags)) return;
+        int newline = 0;
+        for (unsigned i = 0; i < chunk; ++i) {
+            trace_char(text[i]);
+            if (text[i] == '\n') newline = 1;
+        }
+        trace_leave(flags, newline);
+        text += chunk;
+        size -= chunk;
+    }
+}
+
 __attribute__((noinline))
 void chiron_trace_fault_checkpoint(void) { __asm__ volatile("nop\nnop\nnop" ::: "memory"); }
 
@@ -431,6 +446,6 @@ void boot_progress_process_stage(int pid, const char *name, const char *stage) {
     trace_stage_format("PID=%d NAME=%s %s", pid, name ? name : "", stage ? stage : "");
 }
 void boot_progress_exit(int pid, const char *name, int status, unsigned domain, uint64_t code) {
-    trace_stage_format("EXIT PID=%d NAME=%s STATUS=%d DOMAIN=%u CODE=%llx",
+    trace_stage_format("PROC_PREPAREEXIT HOOK PID=%d NAME=%s STATUS=%d DOMAIN=%u CODE=%llx",
                        pid, name ? name : "", status, domain, (unsigned long long)code);
 }

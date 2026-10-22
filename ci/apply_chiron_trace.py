@@ -164,6 +164,18 @@ def apply(source, diagnostics, output):
                             "\t\t    (uintptr_t)cur->func, (uintptr_t)cur->arg);", path)
 
     edit("osfmk/kern/startup.c", startup)
+
+    def console(text, path):
+        text = '// CHIRON_SOURCE_TRACE\n#include "../kern/chiron_trace.h"\n' + text
+        text = replace_once(text, "console_write(char *str, int size)\n{",
+                            "console_write(char *str, int size)\n{\n"
+                            "\tif (boot_progress_active() && str != NULL && size > 0) {\n"
+                            "\t\tchiron_trace_console(str, (unsigned)size);\n\t\treturn;\n\t}", path)
+        return replace_once(text, "console_write_unbuffered(char c)\n{",
+                            "console_write_unbuffered(char c)\n{\n"
+                            "\tif (boot_progress_active()) { boot_progress_putc(c); return; }", path)
+
+    edit("osfmk/console/serial_console.c", console)
     for path, text in pending.items():
         path.write_text(text)
     (source / "osfmk/kern/chiron_trace.h").write_bytes(header.read_bytes())
