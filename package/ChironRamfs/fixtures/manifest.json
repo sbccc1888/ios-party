@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {"path": "/", "type": "dir", "mode": "0755"},
+    {"path": "/dev", "type": "dir", "mode": "0755"},
+    {"path": "/sbin", "type": "dir", "mode": "0755"},
+    {"path": "/usr", "type": "dir", "mode": "0755"},
+    {"path": "/usr/lib", "type": "dir", "mode": "0755"},
+    {"path": "/fixtures", "type": "dir", "mode": "0555"},
+    {"path": "/fixtures/alpha.txt", "type": "file", "source": "alpha.txt", "mode": "0444"},
+    {"path": "/fixtures/beta.txt", "type": "file", "source": "beta.txt", "mode": "0440", "uid": 501, "gid": 20}
+  ]
+}

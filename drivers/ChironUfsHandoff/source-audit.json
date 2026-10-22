@@ -1,0 +1,280 @@
+{
+  "abi": 1,
+  "status": "blocked_no_trusted_board_producer",
+  "verified": 0,
+  "hardware_execution_allowed": false,
+  "hardware_executed": false,
+  "board_handoff_qualified": false,
+  "device_contacted": false,
+  "mmio_accessed": false,
+  "unknown": [
+    "power_retained",
+    "clocks_retained",
+    "phy_ready",
+    "link_active",
+    "firmware_drained",
+    "submissions_blocked",
+    "interrupt_owned",
+    "firmware_dma_retired",
+    "boot_services_exited",
+    "dma_route_known",
+    "dma_permissions",
+    "cache_contract",
+    "lease_retained"
+  ],
+  "resource_capture": {
+    "available": true,
+    "sha256": "08e76d50d5b513614203521be6f5eeaa40966e1e24a087ea582ee3fe6e9d7718",
+    "resources": {
+      "host": [
+        {
+          "base": 31080448,
+          "size": 9472,
+          "end_exclusive": 31089920
+        }
+      ],
+      "phy": [
+        {
+          "base": 31092736,
+          "size": 3496,
+          "end_exclusive": 31096232
+        }
+      ],
+      "interrupt_specifier": [
+        0,
+        265,
+        0
+      ],
+      "spi_intid": 297,
+      "lanes": 2,
+      "clock_names": [
+        "core_clk",
+        "bus_aggr_clk",
+        "iface_clk",
+        "core_clk_unipro",
+        "core_clk_ice",
+        "ref_clk",
+        "tx_lane0_sync_clk",
+        "rx_lane0_sync_clk",
+        "rx_lane1_sync_clk"
+      ],
+      "clocks": [
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 1765301061
+        },
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 2268355032
+        },
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 420789124
+        },
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 1246629693
+        },
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 2229361243
+        },
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 3093803335
+        },
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 1788834938
+        },
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 2135106844
+        },
+        {
+          "provider": "/soc/qcom,gcc@100000",
+          "specifier": 51916766
+        }
+      ],
+      "supplies": {
+        "vdd-hba-supply": "/soc/qcom,gdsc@175004",
+        "vcc-supply": "/soc/qcom,rpm-smd/rpm-regulator-ldoa20/regulator-l20",
+        "vccq-supply": "/soc/qcom,rpm-smd/rpm-regulator-ldoa26/regulator-l26",
+        "vccq2-supply": "/soc/qcom,rpm-smd/rpm-regulator-smpa4/regulator-s4"
+      },
+      "reset_specifier": [
+        60,
+        6
+      ],
+      "gcc": {
+        "compatible": [
+          "qcom,gcc-8998-v2"
+        ],
+        "ranges": [
+          {
+            "base": 1048576,
+            "size": 720896,
+            "end_exclusive": 1769472
+          }
+        ]
+      },
+      "gdsc": {
+        "compatible": [
+          "qcom,gdsc"
+        ],
+        "ranges": [
+          {
+            "base": 1527812,
+            "size": 4,
+            "end_exclusive": 1527816
+          }
+        ]
+      },
+      "ufs_iommus_present": false,
+      "dma_mapping_qualified": false,
+      "power_clocks_qualified_after_ebs": false
+    },
+    "scope": "Android resource capture; not evidence from the current XNU boot"
+  },
+  "source_inventory": [
+    {
+      "path": "/Users/mac/Documents/ChatGPT/ios_party/ci/sources.json",
+      "available": true,
+      "bytes": 1023,
+      "sha256": "94a41b003e61b40ed35297726930e1504c89b5a6a813e736cb0cc42b262c8954"
+    },
+    {
+      "path": "/Users/mac/Documents/ChatGPT/ios_party/drivers/ChironUfsReadonly/ChironUfsReadonly.h",
+      "available": true,
+      "bytes": 13897,
+      "sha256": "4a2f990c815a1be881c0caf3202c9a13abb9b3d320de360711d0a24604c1031f"
+    },
+    {
+      "path": "/Users/mac/Documents/ChatGPT/ios_party/research/upstream/linux-msm8998/msm8998.dtsi",
+      "available": true,
+      "bytes": 89650,
+      "sha256": "5a13945c7ccc6c0fdc1e4b1f69cc5955554f5e0864858323fd1acc92aa2c00ef"
+    },
+    {
+      "path": "/Users/mac/Documents/ChatGPT/ios_party/research/upstream/linux-msm8998/chiron-msm8998-mtp.dtsi",
+      "available": true,
+      "bytes": 20226,
+      "sha256": "134b3d535be53041535ef6fe0a6f9caf6b3035349c40b335914ae3671491738e"
+    },
+    {
+      "path": "/private/tmp/ios-party-research/edk2/Platforms/Msm8998Binaries/chiron/dxe.inc",
+      "available": true,
+      "bytes": 2335,
+      "sha256": "e96d1b2c69910546aca1eb4c4b733c0d2102f47cafa8288edb9d8043b03b1e02",
+      "relevant_lines": [
+        {
+          "line": 14,
+          "text": "INF Platforms/Msm8998Binaries/common/Binaries/UFSDxe/UFSDxe.inf"
+        }
+      ]
+    },
+    {
+      "path": "/private/tmp/ios-party-research/edk2/Platforms/Msm8998Binaries/common/Binaries/UFSDxe/UFSDxe.inf",
+      "available": true,
+      "bytes": 593,
+      "sha256": "64b578aa5c2eeda01f2d2a9fb0efa2b9abacbd09bd465ea50ad4c3b218331e6d",
+      "relevant_lines": [
+        {
+          "line": 3,
+          "text": "# AUTOGENED AS UFSDxe.inf"
+        },
+        {
+          "line": 9,
+          "text": "BASE_NAME      = UFSDxe"
+        },
+        {
+          "line": 16,
+          "text": "DXE_DEPEX|UFSDxe.depex|*"
+        },
+        {
+          "line": 17,
+          "text": "PE32|UFSDxe.efi|*"
+        }
+      ]
+    },
+    {
+      "path": "/private/tmp/ios-party-research/edk2/Platforms/Msm8998Binaries/common/Binaries/UFSDxe/UFSDxe.efi",
+      "available": true,
+      "bytes": 94208,
+      "sha256": "400e08d32f78cb9ebf4f5184ccf2e874ba75363b0d21b5c3e1b12d5f91a2a941"
+    },
+    {
+      "path": "/private/tmp/ios-party-research/edk2/Platforms/Msm8998FamilyPkg/Drivers/SynapticsRmi4Dxe/SynapticsTouchDxe.c",
+      "available": true,
+      "bytes": 15728,
+      "sha256": "04199f4dee8f7eba1753103e353723d95e5914a8627dde72540591a22c682df9",
+      "relevant_lines": [
+        {
+          "line": 57,
+          "text": "STATIC EFI_EVENT        ExitBootServicesEvent;"
+        },
+        {
+          "line": 232,
+          "text": "Rmi4I2cDeviceIo->I2cQupProtocol->Close("
+        },
+        {
+          "line": 276,
+          "text": "Rmi4I2cDeviceIo->I2cQupProtocol->Close("
+        },
+        {
+          "line": 515,
+          "text": "SynapticsTouchDxeExitBootService ("
+        },
+        {
+          "line": 521,
+          "text": "gRmi4I2cDeviceIo->I2cQupProtocol->Close(gI2CInstance->I2cController);"
+        },
+        {
+          "line": 540,
+          "text": "SynapticsTouchDxeExitBootService,"
+        },
+        {
+          "line": 542,
+          "text": "&gEfiEventExitBootServicesGuid,"
+        },
+        {
+          "line": 543,
+          "text": "&ExitBootServicesEvent"
+        }
+      ]
+    },
+    {
+      "path": "/private/tmp/ios-party-research/edk2/Platforms/Msm8998ACPI/xiaomi/chiron/dsdt.asl",
+      "available": true,
+      "bytes": 3212723,
+      "sha256": "f6f32b87ca9f650a08b669cb732acf70bd21b2251a4da2640cfa4bdcc6f5cda7"
+    },
+    {
+      "path": "/private/tmp/ios-party-research/unixnu/drivers/DarwinBoot/DarwinBootPkg/Driver/DarwinBoot.c",
+      "available": true,
+      "bytes": 28253,
+      "sha256": "cd141d002f24b951d3dfa7773f29cf645712be3c71f4b6e801d1114eb81b5c0a",
+      "relevant_lines": [
+        {
+          "line": 640,
+          "text": "Status = gBS->ExitBootServices (mImage, Key);"
+        }
+      ]
+    }
+  ],
+  "source_provenance": "Local snapshot hashes only; no .git commit authentication inferred.",
+  "source_gaps": [
+    "UFSDxe source and authenticated exit callback trace are unavailable",
+    "Linux reference is DTS/DTSI only; ufshcd/ufs-qcom/QMP/GCC implementations are absent",
+    "Referenced msm-arm-smmu-8998.dtsi and implementation definitions are absent",
+    "Expanded edk2 snapshot lacks Common and simple-init submodule contents"
+  ],
+  "ufs_exit_callback": "Unknown: fixed UFSDxe is binary-only; no UFS callback source available.",
+  "blockers": [
+    "No trusted in-boot board producer or independently held live context",
+    "No post-EBS power/clock/PHY/link retention and safe-access evidence",
+    "No firmware drain/submission exclusion/IRQ and old DMA retirement evidence",
+    "No measured MSM8998 DMA stream/context route or retained mapping",
+    "No dedicated retained DMA allocation and cache-maintenance owner"
+  ]
+}

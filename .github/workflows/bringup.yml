@@ -39,6 +39,10 @@ on:
         description: RAM-volume-capable chiron-firmware artifact for packaging
         type: string
         default: ''
+      foundation_tests:
+        description: Run independent userspace foundation probes after ram-trace qualification
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -130,6 +134,7 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: '1'
       CHIRON_KERNEL_MODE: ${{ inputs.kernel_mode || 'bootstrap' }}
       CHIRON_EFI_RUN: ${{ inputs.efi_run_id }}
+      CHIRON_FOUNDATION_TESTS: ${{ inputs.foundation_tests && '1' || '0' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -142,6 +147,9 @@ jobs:
           command -v cmake
           command -v ninja
           command -v unifdef || brew install unifdef
+          if [ "$CHIRON_FOUNDATION_TESTS" = 1 ]; then
+            test "$CHIRON_KERNEL_MODE" = ram-trace
+          fi
           if [ "$CHIRON_KERNEL_MODE" = ram-init ] || [ "$CHIRON_KERNEL_MODE" = ram-trace ]; then
             test -n "$CHIRON_EFI_RUN"
             command -v qemu-system-aarch64 || brew install qemu
@@ -156,6 +164,19 @@ jobs:
       - run: bash ci/build-kernel.sh
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Test independent userspace foundation probes
+        if: inputs.foundation_tests && inputs.kernel_mode == 'ram-trace'
+        run: |
+          python3 ci/test_foundation_runtime.py \
+            --tree "$RUNNER_TEMP/chiron-kernel/chiron/tree" \
+            --output dist/foundation-tests
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && inputs.foundation_tests
+        with:
+          name: chiron-foundation-tests
+          path: dist/foundation-tests/
+          if-no-files-found: error
+          retention-days: 7
       - name: Compile independent UFS read-only archive
         if: always() && inputs.kernel_mode == 'ram-trace'
         continue-on-error: true

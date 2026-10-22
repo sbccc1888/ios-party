@@ -106,7 +106,12 @@ def main():
                  "    if '_chiron_selftest_results' in user_addresses:\n"
                  "        user_inspections.append(('_chiron_selftest_results', 64))\n"
                  "    if '_chiron_selftest_diagnostics' in user_addresses:\n"
-                 "        user_inspections.append(('_chiron_selftest_diagnostics', 40))")
+                 "        user_inspections.append(('_chiron_selftest_diagnostics', 40))\n"
+                 "    if '_chiron_abi_results' in user_addresses:\n"
+                 "        abi_bytes = user_addresses['_chiron_abi_results_end'] - user_addresses['_chiron_abi_results']\n"
+                 "        if not 32 <= abi_bytes <= 1024 or abi_bytes % 8:\n"
+                 "            raise ValueError('invalid userspace foundation result bounds')\n"
+                 "        user_inspections.append(('_chiron_abi_results', abi_bytes))")
     observer = scripts / "qemu-entry/gdb-stop.py"
     text = observer.read_text()
     cpu_expression = "'cortex-a710' if args.qemu_accel == 'tcg' else 'host'"

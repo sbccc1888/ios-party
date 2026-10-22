@@ -1,0 +1,1 @@
+CHRAMFS beta fixture with a different exact file length
