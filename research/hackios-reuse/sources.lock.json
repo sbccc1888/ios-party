@@ -1,0 +1,25 @@
+{
+  "schema": "chiron-hackios-reuse-sources-v1",
+  "kernel": {
+    "url": "https://github.com/oosexgang/hackios-xnu-kernel.git",
+    "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab"
+  },
+  "userland": {
+    "url": "https://github.com/oosexgang/hackios-xnu-userland.git",
+    "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772"
+  },
+  "sweet": {
+    "url": "https://github.com/dipa-studio/ios-sweet.git",
+    "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4"
+  },
+  "xnu8796": {
+    "url": "https://github.com/apple-oss-distributions/xnu.git",
+    "commit": "c54f35ca767986246321eb901baf8f5ff7923f6a",
+    "tag": "xnu-8796.121.2"
+  },
+  "xnu10063": {
+    "url": "https://github.com/apple-oss-distributions/xnu.git",
+    "commit": "d8b80295118ef25ac3a784134bcf95cd8e88109f",
+    "tag": "xnu-10063.141.1"
+  }
+}

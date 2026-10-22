@@ -1,0 +1,1108 @@
+{
+  "schema": "chiron-hackios-reuse-verification-v1",
+  "source_checks_passed": true,
+  "host_checks_passed": true,
+  "kernel_built": false,
+  "qemu_executed": false,
+  "hardware_observed": false,
+  "apple_target_binaries_verified": false,
+  "desktop_boot_qualified": false,
+  "sources": {
+    "kernel": {
+      "url": "https://github.com/oosexgang/hackios-xnu-kernel.git",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab"
+    },
+    "userland": {
+      "url": "https://github.com/oosexgang/hackios-xnu-userland.git",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772"
+    },
+    "sweet": {
+      "url": "https://github.com/dipa-studio/ios-sweet.git",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4"
+    },
+    "xnu8796": {
+      "url": "https://github.com/apple-oss-distributions/xnu.git",
+      "commit": "c54f35ca767986246321eb901baf8f5ff7923f6a",
+      "tag": "xnu-8796.121.2"
+    },
+    "xnu10063": {
+      "url": "https://github.com/apple-oss-distributions/xnu.git",
+      "commit": "d8b80295118ef25ac3a784134bcf95cd8e88109f",
+      "tag": "xnu-10063.141.1"
+    }
+  },
+  "inventory": [
+    {
+      "repository": "kernel",
+      "path": "docs/PORTING.md",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 4227,
+      "sha256": "adff0588580c64ceb68ac8543c11c6e9338b871384c822bb27ce097614c2da94"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/README.md",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 7830,
+      "sha256": "b7589e49ea504f173a506ecfe96b7902c9dfd6696d70de833f00f928988d32ae"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/redwood.patch",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 122053,
+      "sha256": "ac3b2b578a6d1d480079557a576bf1bb4155082d4ee2958373c18f5d78b8e89b"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/apply.sh",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 1842,
+      "sha256": "5d3d5d6c88c8b1b5639f5712035a65d3a9872a59ea0c586cc31cfcedb4931435"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu-build.sh",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 1068,
+      "sha256": "2a331038d2b062a1ada5285976b6b28b747b6210525a8e87de726fa581e0310c"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnuloader/loader.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 150273,
+      "sha256": "95ce0c52edb90d95c972a6cd865203e2b1d037289f5093c59196e6eb993578c6"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnuloader/efi.h",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 11221,
+      "sha256": "4d5023e673cd8ae62b53424ad8c6bf665097990bd0d500e763959a1a1d3a8b22"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnuloader/mkpayload.py",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 1743,
+      "sha256": "f5a1aec8de1aed3d6e88f05851279639d5062d3b666fff1a294b0ed48c08d717"
+    },
+    {
+      "repository": "kernel",
+      "path": "common/new-device.sh",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 3807,
+      "sha256": "5de4a69c61bdef0ef9638ac16495cabd9fafa83aa6bf74d7151650fd79306c88"
+    },
+    {
+      "repository": "kernel",
+      "path": "common/build.sh",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 3014,
+      "sha256": "639c1a2090148aa68ae40a86c28e2df672c03f8bcd2783c1fecf78c6f0b09461"
+    },
+    {
+      "repository": "kernel",
+      "path": "common/run.sh",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 1338,
+      "sha256": "d8f7c500bec2eb509447684dbe1d4cec7c2dbe4f441f9cd1c9c21c511fc9fc63"
+    },
+    {
+      "repository": "kernel",
+      "path": "xl",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 16191,
+      "sha256": "5eaf04280390f4907f0007919e7e08d1b0b4165ea30cbff55a049c14971cb766"
+    },
+    {
+      "repository": "kernel",
+      "path": "qemu/run.sh",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 1695,
+      "sha256": "473f26e031dab911d812a325bb6a050fa429a399ded9d0c7e1cfaf015a93bd32"
+    },
+    {
+      "repository": "kernel",
+      "path": "qemu/run-ios.sh",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 5750,
+      "sha256": "6dbcca8fde0a4613b4821027423ea5aa3f3277afafbd43b390bc799b1c43f495"
+    },
+    {
+      "repository": "kernel",
+      "path": "qemu/daemonlog.sh",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 1100,
+      "sha256": "3ebc94de56dc6406357628f0753e48e625b66a1e070f90644a56ca848dbf71db"
+    },
+    {
+      "repository": "kernel",
+      "path": "mkxnuimg.py",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 3818,
+      "sha256": "fa6af22ce56f54b5195cd117cca4f98012704f2f87f9c4e278e3006d88ff498c"
+    },
+    {
+      "repository": "kernel",
+      "path": "uefi/mu-silicium.patch",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 17671,
+      "sha256": "22dbdd861657f40112fe4a9c03f663b55ac890cd002f2ba9f0254dd74f0389c4"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/bsd/miscfs/apfs/apfs_lib.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 107397,
+      "sha256": "0394fc82350785aac8e40d62e26f0e075d474757c5e925ec9ba7e29e246ccb96"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/bsd/miscfs/apfs/apfs_vfsops.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 48612,
+      "sha256": "f8d3efd49152aea388cbc96ee5fd3876dfe19ab3b6efb329c6df6f1d4c19b61b"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/bsd/miscfs/apfs/apfs_vnops.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 37421,
+      "sha256": "d5ff5f2718f77c27184d66034c07a0a29312eef3035fb1d18fbb0a92e7290d0d"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/bsd/miscfs/ramfs/ramfs.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 58652,
+      "sha256": "6cf7ca51517396cbfb4ff3a906bb91a89cf779a792960a7effa4d5b426dc8ad9"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/iokit/Kernel/MiniIOSurface.cpp",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 60895,
+      "sha256": "88a59bb62df6d11a084b957154f6222747710f903b7475644074677c8347e3f7"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 63268,
+      "sha256": "78141b3294b6c16b9173d5a7af64dc0b8a16f57d8027c93be608ef9dbbf764e9"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/bsd/kern/kern_minimac.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 15912,
+      "sha256": "3e28831ea83c6f376099fae32a90a0ce49c5612d5c9cde18b55e09c1acc387a2"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/libkern/amfi/miniamfi.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 8803,
+      "sha256": "071c9795555e436454605cc8e2d9c85cab882325fd8352adeb3132479538fee1"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/osfmk/arm64/psci_smp.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 14373,
+      "sha256": "143d4b2a2dae86b628a94395b4034b86f878ef200e7d8e3ce636cffaede2f8b4"
+    },
+    {
+      "repository": "kernel",
+      "path": "xnu/files/osfmk/arm64/gic_v3_irq.c",
+      "commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+      "bytes": 18189,
+      "sha256": "efc5fb6dd1366db577c993d16956c0f3004819b66b25599d5cb462a47268c731"
+    },
+    {
+      "repository": "userland",
+      "path": "ios165/fetch.sh",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 5885,
+      "sha256": "7530b8c49ab373af8e8f1b62260a58ac9075716a294312d598b69544e7ae3cd9"
+    },
+    {
+      "repository": "userland",
+      "path": "ios165/select-system.py",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 16870,
+      "sha256": "d8dd3562ec31b0e03de63b34f7c4f9aad6758e9f52763d9b993402ea4a6eecf1"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/build.sh",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 58049,
+      "sha256": "a4268a3f68931c00c48ee14c4f58cb20997c71eef37a12debc42c286991ae02d"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/src/stage0.c",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 1080,
+      "sha256": "d1022df64c1787fc10a146731fe37925debbe72bcd77d7a8286bd9a4d26977ac"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/src/init.c",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 48753,
+      "sha256": "df70a9e227274ad90206bb91d888e292ddbce3a75d6cf014232a6ab37a3d5686"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/libmini/start.S",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 1098,
+      "sha256": "75024af4f60a89ff82269a7076be303bcb50779f9f1d4ef504231bcf4ea1012c"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/src/inject.c",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 55441,
+      "sha256": "7602d0ce95eb32e69ba54717d0ca680354269c2446d7846fc661b656dd99ab9c"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/src/inject_sb.c",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 58244,
+      "sha256": "6c8795919a0393f4c75c0580f80d08d72857cd0d9bc7ce21175ed6843fee8692"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/src/hello_dyn.c",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 762,
+      "sha256": "9e59c0dd70c7bb2388383f4a4bc107d631aad281026847ac7413fdea5fa164a6"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/src/surf_test.c",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 7714,
+      "sha256": "d23a22a4a19783d6dd8126a73aa5714361066b7ab78c7e9203f2fcbd65f5cad6"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/rc.ios",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 250,
+      "sha256": "6dc5af8e6dd2bac981559e7d8e7d3743273c0c4880614e0a4a339b029d8a1b7f"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/rc.launchd",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 82,
+      "sha256": "81c30138e7fda820a143bed291c921a8354cdc28230a397936dd4a92c3efe970"
+    },
+    {
+      "repository": "userland",
+      "path": "userland/mkjobs.py",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 26321,
+      "sha256": "b5d297070abd74cdef8faec4a9600bbc41702a05ce884681f61cb6fb205ad88f"
+    },
+    {
+      "repository": "userland",
+      "path": "tools/apfs/mkapfs.py",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 44142,
+      "sha256": "c14a81ae9286c69a77673552fcf240de84d37e8fde16f617b2d2efc84d758bdc"
+    },
+    {
+      "repository": "userland",
+      "path": "tools/apfs/apfs.py",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 43885,
+      "sha256": "8e837af2b68ba99902d76becb02193f6c77c29ee14e902b45ddee4837eed6200"
+    },
+    {
+      "repository": "userland",
+      "path": "tools/apfs/test_fetch.c",
+      "commit": "906425b75e02b4f99eb5d7bb1ef7c9583472d772",
+      "bytes": 3240,
+      "sha256": "a54e6452813b6a5b44d2ec61f8eb508b77e95638546711754d44e4f305233fd3"
+    },
+    {
+      "repository": "sweet",
+      "path": "AGENTS.md",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1072,
+      "sha256": "c91957ea8eadf2ec6b8bfb4f83503ed27bcdaeca5989634a52a56c6b266eeb40"
+    },
+    {
+      "repository": "sweet",
+      "path": "NOTES.md",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 181386,
+      "sha256": "aceb43854eab7cce8447e2c612df85dca19a5737c3afc4a764ab8cda7a6563c1"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/README.md",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 594,
+      "sha256": "f98f233dfa5cb0a095ad9cfd8b384d5af4f96c5abcb5677dff3511cb50ff0638"
+    },
+    {
+      "repository": "sweet",
+      "path": "tools/sweet-init.S",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2123,
+      "sha256": "deba9506138347ab6d72d44b7e5cafebb0b00759408a9d6ba2fc75fbbbd3a842"
+    },
+    {
+      "repository": "sweet",
+      "path": "tools/mkiosroot.sh",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 5594,
+      "sha256": "b1b28a8ca69e572452872e0622f441c0cee170ddf94e51f6a8709adcb53e8655"
+    },
+    {
+      "repository": "sweet",
+      "path": "tools/mkadt.py",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 12046,
+      "sha256": "1295e33ef2cd675ccfaa5941dca68737969dd1b77e31eff8028a3b5a280a4c81"
+    },
+    {
+      "repository": "sweet",
+      "path": "tools/qemu-sweet.py",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 15322,
+      "sha256": "1571110aed3adfd8044ef323fcaae8033c521d69a1604839870fce78de1e1b1c"
+    },
+    {
+      "repository": "sweet",
+      "path": "tools/sweet-log.py",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1090,
+      "sha256": "5561e9f86f6ebca00caa1af3803a147b50dcac3c60934215152342b51db136f5"
+    },
+    {
+      "repository": "sweet",
+      "path": "tools/sweet-usbnet.sh",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1447,
+      "sha256": "07b60db47b4a7e48b2968bab4f6d34d4c648ed1ff843eaa66fb65cc80fb91fba"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0001-new-clang-drop-removed-auto-var-init-flag.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 426,
+      "sha256": "c057dea49d5bcccbc7d317d60f91cc8062689fd26d3d739f709e279bddb56a1c"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0002-new-clang-backport-UIO_STACKBUF.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 13496,
+      "sha256": "19f7571eb90608ef66f1d8cf9dee5333d4fbbccbfeee9ea244b90cb4a4240727"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0003-sweet-framebuffer-serial-console.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 4939,
+      "sha256": "ff08f768b0e7d830efd1cab98b8cb18e66c60935c4b640e74146e5c1cbb5371c"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0004-sweet-machine-config.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 10417,
+      "sha256": "b18a77a0b994871937a0b4138906f9f1693153c61eca6e598018271360ad5432"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0005-non-pac-build-fixes.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 381,
+      "sha256": "b84deb9b9e5b8426aca7b713c3c5b5829e4e22354dd86d64329f14b15704d58c"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0006-sweet-master-config-open-source-asm-pmap.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 7664,
+      "sha256": "c7cf993c8362a689371f2b819903792be2deb5032e9ea7edc20a4abd627e233f"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0007-sweet-stub-apple-internal-headers.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 3193,
+      "sha256": "8c8e43ac50591a2c6e4f1c1bff4edeb1935f8e02b28db50596f3be9a3a80c8e5"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0008-sweet-fill-closed-lib-gaps-kpc-stub.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 9708,
+      "sha256": "4a959eeac46696c08fe826a0d0a7d602c0767f5f92bf28bd641e5c6fb5a7d452"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0009-sweet-drop-apple-soc-only-exports.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2829,
+      "sha256": "07ed88210debc8395944e1fafd1771abd5935f31ebae620ff8f15fd96d9a810e"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0010-sweet-early-framebuffer-debug.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 9737,
+      "sha256": "bdc940de4f8d51b0d254b89e54036dcbfd1e33baaaa13267ae2b9ad980046c5a"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0011-sweet-physmap-alignment-padding.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2020,
+      "sha256": "4c1c2d3f82222a8182060ffd5f681905c20d9232ec972001daa8c25b21ada520"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0012-sweet-keep-debug-console-after-ttbr0.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 7653,
+      "sha256": "6e5f5e04b940f2c35e17f97df480784459a922e8fc40b8c75b637325c35a474f"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0013-sweet-kmem-rng-without-corecrypto.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2867,
+      "sha256": "12132c39435479e546d1ce4e24622d2ad145c8eb6274293b690ea5e1e58d9f91"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0014-sweet-kernel-hmac-prng.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 9384,
+      "sha256": "04d13bf3c6c2e23c95c55677a6aa8f1e5c69971d8615eee7d0f05ba9d6963237"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0015-sweet-unavailable-trust-cache-runtime.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2443,
+      "sha256": "52c922333707deb9f9e697cf5ba092213dcb578f36ca209e750582a650b1eb18"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0016-sweet-device-tree-platform-expert.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 3590,
+      "sha256": "b71c0fc56d832537a6ca096a3fe4893c498c234adb4fde419e1a791de74172ab"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0017-sweet-device-tree-virtual-timer-irq.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2831,
+      "sha256": "b3b561af3354f8c1297a084c8025c282d28aeb0d4e14758d6d63bdc81cd0bd50"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0018-sweet-boot-cpu-driver.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 6292,
+      "sha256": "06de6e84d8ff9b0307872fb78a827e84fc1e16a1b7286a87f0e618a5dc2692a9"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0019-sweet-builtin-pthread.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 4802,
+      "sha256": "ee34ec3e5876f1316c6665059c3c38a09602bc100d805cebe23f260e2033899d"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0020-sweet-portable-aes-cbc.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 9784,
+      "sha256": "b05cdf11845d95bc9cff7d9ca44ef4d24d303bcf759cb5bb74a9408473161b26"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0021-sweet-mockfs-ramdisk-root.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2481,
+      "sha256": "27b5a4fb195e772178a60311d5d1935a908bd223ea7ebb5fca811532ad975e2c"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0022-sweet-ramdisk-root-without-iomedia.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 715,
+      "sha256": "ca83981bb7bd4d4f8ab22919f74ee88577b628f7a9049af222af609d9a721461"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0023-sweet-builtin-sha256-for-libkern.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1863,
+      "sha256": "9f2e879d87d976200ee8697182121a15d73c22ec3beeb14c2d35069be01267f9"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0024-sweet-mockfs-virtual-ramdisk-io.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1621,
+      "sha256": "20d0a830ed4128141b3b211fd50cfed090bc490597c4f8b36256cc93f003dc76"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0025-sweet-builtin-amfi-no-entitlements.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 6152,
+      "sha256": "5cb4008df97884c35943d6f4b9349e89768072b9bf00e1032a32a8f65166eae6"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0026-sweet-builtin-hfs.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 13200,
+      "sha256": "465d96fd71bc2094d0aa0388e1a2586ea7fd856d021272d1d2d7083bd020d6e4"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0027-sweet-bearssl-md5.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 4315,
+      "sha256": "98d9c82553b790468d3675f74821ced99eb524350ed9b7fd7cc796fdd26f981e"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0028-sweet-ufs-root-device.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 16341,
+      "sha256": "249f468e5c85bfa53f4005f5c1c669004462d424dd95b612268091a73e13cecc"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0029-sweet-unsealed-root-volume.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 765,
+      "sha256": "e76d458b4ee831309759425f10347caff6d6fc7736e024abf0afcea0623c04ac"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0030-sweet-ufs-writes.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 7554,
+      "sha256": "fb2869176d0fb4cc55d8754aec609015d529696fc783de025368b44834192802"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0031-sweet-read-write-root.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1491,
+      "sha256": "949a2ddd2832e39e4e36b3f40888718ec30201142d5d14e79203f0000f79e056"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0032-sweet-bearssl-sha1.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 3931,
+      "sha256": "611f179956b844d0cc0e2a5d53eb664552420a6804551e1f5f55eb17040a31ed"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0033-sweet-bearssl-sha384-sha512.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 3872,
+      "sha256": "13641194f854ed7da857394facfd6b5b3339716ced2f90e02836fd9fa689476d"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0034-sweet-ufs-dma-above-4g.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1584,
+      "sha256": "e1e76854114d882db815889b3109d27fe63abc839c3ef4bcf235d32ca36eec7f"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0035-sweet-amfi-entitlements-platform-binaries.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 16060,
+      "sha256": "fa98049cca8a1ac0f77592117897b4dfa9a357606f97a66183525d96c5b3e252"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0036-sweet-amfi-cs-signed.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1172,
+      "sha256": "a23593fac4ad8b59160dd8363db5eafd799b19f59378ce01b2d07a9fa02f8904"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0037-sweet-config-bindfs.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1241,
+      "sha256": "53159e116791f743cc5f2b7a5ec9ec31c4f308fe44dd62c94417985c9a457e53"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0038-sweet-applekeystore.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 7770,
+      "sha256": "71ab043a53c00db2814878c85818d83e97ae580ee0b3bde3ddf1dd1e97038087"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0039-sweet-coredump-default-off.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 863,
+      "sha256": "6d60ba2732759a8fc1dbe183dbe16a8f05462e861b8008a76a6dcb20a812df8b"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0040-sweet-iowatchdog.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 3954,
+      "sha256": "c58a94a2ce3acc03e5b60efc1a98a8c8fd723fe139908186396a119248879669"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0041-sweet-hfs-link-notes.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1975,
+      "sha256": "ef924399bbef4728daa16cec9421e583aab301d327a480c0b9dcac6ce68b2728"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0042-sweet-short-exec-log.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 648,
+      "sha256": "aed20087fb248a87567883dafb7f2e83da8647c1e8ef112299052decb2167fdd"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0043-sweet-console-crash-log.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 3431,
+      "sha256": "ef83e99baf6ae1b9cc35968d06bb49262c10ea07f51e64bfbb58d50c5a5e58e6"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0044-sweet-crash-log-reason.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 750,
+      "sha256": "f1b4085e217de41a9b26824d3bd0c27fec15abb2b016abc98acd7b44249a99b3"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0045-sweet-iowatchdog-pmu-primary.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1251,
+      "sha256": "5733977651e593d6a4179b7b16d3d8c14459dff1ae48dc16d1ff718cff0ca4d2"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0046-sweet-iosurface-iomfb.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 46413,
+      "sha256": "0f23986cf9861ad52a6a0986328fa83c9f0ec222d53dee2bce5921d79c90e5be"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0047-sweet-persistent-console-log.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 5121,
+      "sha256": "1e73bc5acf4823f5c842ea2b61c70595a2ca764872d13cd2aafbcec8db708017"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0048-sweet-devnull-tee.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1873,
+      "sha256": "ced1853fa17a1a542935f7fb549591aeb3a7184dadd18fd8111812a5b3a66d91"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0049-sweet-iokit-trace.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 4820,
+      "sha256": "c0522c74d30e577707174d0fb3e5bda005ac35f81339d8f1ab4e2a50de413f85"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0050-sweet-sandbox-policy.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2358,
+      "sha256": "d2c2036e2a4e2388d442165cd0b85f7bf622f6d249a75e4242fb1994076142bd"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0051-sweet-crash-heap-strings.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 3274,
+      "sha256": "8b0fc8aaa7f2a76ef6202db233dc6c2134fd163c212393c5838dc238dfdcaec4"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0052-sweet-hfs-rename-swap.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 847,
+      "sha256": "5b115a5435a3d8bd28f9b30bf0eb667a36a3454256ee53b806f0a0f09145f6b2"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0053-sweet-crash-scan-springboard.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1086,
+      "sha256": "ed1f28e8a578bade8c4d8ae1e25dd510a1cd0b9f9a5e515418a01c80a2704ff1"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0054-sweet-process-sampler.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 6472,
+      "sha256": "e3ac3a3c5b349f05e9b467588209ac13bf0d2ec6549983796c6cba8fa404430e"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0055-sweet-aks-ext-state-sampler-depth.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2425,
+      "sha256": "5555b8045c6ab2b0653725cbf2d361f54d296730e83f8495c1c71e0a6c0fa495"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0056-sweet-fb-throttled-present.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2460,
+      "sha256": "36eb518904a3304d9494e9a58e90e9bd72fe6a577e9bf6f647ad6592c882fa97"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0057-sweet-no-ext-resolver.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1228,
+      "sha256": "dde36d2d45ee13ee364e7f1e858242d901b828986d6fd3c4157fcfdcd85ff725"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0058-sweet-hid-event-services.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1023522,
+      "sha256": "9ce7e4b84d0622c6c0153a1d3511f92612e220d2a830049fa428e6ac1625bcc3"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0059-sweet-iphone-identity.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1748,
+      "sha256": "59bd94a272d6620d4a402ff09cc96def02f78bd96a10bda0d3cd2e4809a180a0"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0060-sweet-keys-touch-drivers.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 24995,
+      "sha256": "c77a3393d7ef29e9d5b4ac70dc7d3baa44bc4fa560a25d3f3c20d41a965d4449"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0061-sweet-iphone-x-display-size.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 4522,
+      "sha256": "d4d795cbb17cc4084f1ce148778a6d908d004a7b41da6f4c0e38353071cca735"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0062-sweet-touch-power-battery.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 32193,
+      "sha256": "8a4dc08c61545d31bd2c0a70530434824b3e3d6c4bf96e8b63559db31148a617"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0063-sweet-goodix-geni-packing.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 11015,
+      "sha256": "02fb16494b60d7c8c91dd1fda7c7ee5f5e3088be01a9633205c02b22a0e7eeb3"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0064-sweet-priv-work-interval.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1818,
+      "sha256": "ef85defd8cbdb9d444070614865d419e0b028e1ab6b0bb8ce1b8b2da8ede63d6"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0065-sweet-smp-psci.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 15782,
+      "sha256": "4aad63a0c924ca516f7960c0484b1a4bea6c97ae4581e20fef2cea0cfe489d16"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0066-sweet-crash-fault-region.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 955,
+      "sha256": "77fd8f78fbbdc0f934d6f966054f059932de5df7b28f75ebea934a4b7cf46182"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0067-sweet-console-mute.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1849,
+      "sha256": "3a5b644a242354c62b73baae3d05a816b982ba9c19836bc7297362813af1c77d"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0068-sweet-surface-lookup-cached.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2372,
+      "sha256": "97a5b8a9414761cb9b9d2d666be46ffeb3629faa03185930dbf96a72e0bbf804"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0069-sweet-ufs-faster.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 6528,
+      "sha256": "d81f1a3da8ad84017e4bf5edb0ed10c0f49159180c0abe5843e417d9391578d3"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0070-sweet-pid-hibernate.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1164,
+      "sha256": "ec925678a435aa3146cb3d8b3bfa4121eea53c5251f77db229737b5902c8801b"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0071-sweet-touch-edge.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1793,
+      "sha256": "05fa04a2272971f414fe5bccbb7ca75ac4fb3d49bd3c6240990fff0eaff27ccc"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0072-sweet-usb-probe.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 4937,
+      "sha256": "963aa45557d60610d4d11672ed8f678487253caf196a12a247ebcc8389a5a0b9"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0073-sweet-usb-device-ep0.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 13550,
+      "sha256": "66ddd7707ab11dd690a3f3a3d38350ab4ac4a8d1b673a7b740710754d3e9c7de"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0074-sweet-usb-vbus-override.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1671,
+      "sha256": "e1478db32cb6e19b1e137e38782871935244f29805297d86147b157e7941a20f"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0075-sweet-usb-ecm.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 14942,
+      "sha256": "16e9a14cff842ef243fb891d3153fcee813b85c8cfb3739f942843e946dcc8e3"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0076-sweet-usb-rx-mbuf.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 1085,
+      "sha256": "eba80b448ca75c23b2eaf80ec29d094566361c55d4c30e4cdcc3c93d03456e94"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0077-sweet-usb-live-log.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2954,
+      "sha256": "c39f6f8178892b2fc87721dc572d044bdb11a048443fbc28aae6f7010f012c9b"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0078-sweet-smp-8-cores.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2080,
+      "sha256": "3598dc629f16e5f2abb342a7ecb04b3b8d15b4b2709ac9c8af6db89de30c4f7d"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0079-sweet-display-power.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2939,
+      "sha256": "062255631bf678f7c1e14c62895bf60372e209b2153d06e73d931f3456028900"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0080-sweet-net-trace.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2087,
+      "sha256": "03a43a3b03fb4c4f87642c007c84fdd3353541a160ae921293e3f7ac9c978b1d"
+    },
+    {
+      "repository": "sweet",
+      "path": "xnu/patches/0081-sweet-usb-link-state.patch",
+      "commit": "067c9b3d463ecfbe37520683637ea2e6af31f3a4",
+      "bytes": 2088,
+      "sha256": "4d6b492d81379b93ae831a34a3972cb6366e0412c981385c32b36ee512c95da9"
+    },
+    {
+      "repository": "xnu8796",
+      "path": "osfmk/arm/arm_init.c",
+      "commit": "c54f35ca767986246321eb901baf8f5ff7923f6a",
+      "bytes": 24661,
+      "sha256": "5161a3fc8b31b3317e2dd745594ec8a6877590a3976147b52bfd1255d9eec47e"
+    },
+    {
+      "repository": "xnu8796",
+      "path": "bsd/kern/mach_loader.c",
+      "commit": "c54f35ca767986246321eb901baf8f5ff7923f6a",
+      "bytes": 107426,
+      "sha256": "58a36847003e7eaf0bc5e2cc76cd206e0152ec601253888504a2a9f65dec7486"
+    },
+    {
+      "repository": "xnu8796",
+      "path": "osfmk/arm/commpage/commpage.c",
+      "commit": "c54f35ca767986246321eb901baf8f5ff7923f6a",
+      "bytes": 25672,
+      "sha256": "9b1050a77cca5b2aad668ef87f5a6edbe5faee8c0b658e71ea5ff45c947d58e8"
+    },
+    {
+      "repository": "xnu8796",
+      "path": "osfmk/vm/vm_shared_region.c",
+      "commit": "c54f35ca767986246321eb901baf8f5ff7923f6a",
+      "bytes": 120947,
+      "sha256": "5043b34437b65845da89889232baf7b3731bc4ee4e7436bbcad5908a3ee9752b"
+    },
+    {
+      "repository": "xnu8796",
+      "path": "osfmk/vm/vm_shared_region_pager.c",
+      "commit": "c54f35ca767986246321eb901baf8f5ff7923f6a",
+      "bytes": 42904,
+      "sha256": "4df4286023c1fa78e51e931c214baa3f1c1802dfad55656dcf53d2395047df9b"
+    },
+    {
+      "repository": "xnu8796",
+      "path": "osfmk/arm64/proc_reg.h",
+      "commit": "c54f35ca767986246321eb901baf8f5ff7923f6a",
+      "bytes": 98515,
+      "sha256": "129f4d42d97c8c403dd83ebbb99bb7ccc3954adfcbb9621bcf08f8f8b218b33b"
+    },
+    {
+      "repository": "xnu10063",
+      "path": "bsd/kern/mach_loader.c",
+      "commit": "d8b80295118ef25ac3a784134bcf95cd8e88109f",
+      "bytes": 108155,
+      "sha256": "5a28982662a7dfed1a8cb27f0fcc33b24fe852a88dcff23029d2401a3c078af4"
+    },
+    {
+      "repository": "xnu10063",
+      "path": "osfmk/vm/vm_shared_region.c",
+      "commit": "d8b80295118ef25ac3a784134bcf95cd8e88109f",
+      "bytes": 127077,
+      "sha256": "f55a92a37e311d301a873e62aa0dae6cfb34b9eb03037c113b01c6f91a5c187a"
+    },
+    {
+      "repository": "xnu10063",
+      "path": "osfmk/vm/vm_shared_region_pager.c",
+      "commit": "d8b80295118ef25ac3a784134bcf95cd8e88109f",
+      "bytes": 44275,
+      "sha256": "1c5db57a3f9a061e0faa34a7488d2105622c2dba5482bd6af9666469bfeb8a7a"
+    }
+  ],
+  "host_environment": {
+    "python": "3.14.2",
+    "system": "Darwin",
+    "machine": "x86_64",
+    "cc": "Apple clang version 16.0.0 (clang-1600.0.26.3)"
+  },
+  "current_patched_snapshot": {
+    "provenance": "content hashes only; not authenticated as a complete Git tree",
+    "patch_returncode": 1,
+    "patch_stderr": "error: patch failed: bsd/conf/files:109\nerror: bsd/conf/files: patch does not apply\nerror: patch failed: bsd/kern/decmpfs.c:515\nerror: bsd/kern/decmpfs.c: patch does not apply\nerror: patch failed: bsd/kern/kern_exec.c:1315\nerror: bsd/kern/kern_exec.c: patch does not apply\nerror: patch failed: bsd/kern/kern_memorystatus.c:222\nerror: bsd/kern/kern_memorystatus.c: patch does not apply\nerror: patch failed: bsd/kern/kern_priv.c:82\nerror: bsd/kern/kern_priv.c: patch does not apply\nerror: patch failed: bsd/kern/kpi_socket.c:727\nerror: bsd/kern/kpi_socket.c: patch does not apply\nerror: patch failed: bsd/kern/sys_generic.c:303\nerror: bsd/kern/sys_generic.c: patch does not apply\nerror: patch failed: bsd/kern/uipc_syscalls.c:3561\nerror: bsd/kern/uipc_syscalls.c: patch does not apply\nerror: patch failed: bsd/miscfs/bindfs/bind_vfsops.c:139\nerror: bsd/miscfs/bindfs/bind_vfsops.c: patch does not apply\nerror: patch failed: bsd/miscfs/mockfs/mockfs_fsnode.c:85\nerror: bsd/miscfs/mockfs/mockfs_fsnode.c: patch does not apply\nerror: patch failed: bsd/nfs/nfs_serv.c:769\nerror: bsd/nfs/nfs_serv.c: patch does not apply\nerror: patch failed: bsd/sys/uio_internal.h:170\nerror: bsd/sys/uio_internal.h: patch does not apply\nerror: patch failed: bsd/vfs/vfs_attrlist.c:878\nerror: bsd/vfs/vfs_attrlist.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_conf.c:103\nerror: bsd/vfs/vfs_conf.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_lookup.c:1670\nerror: bsd/vfs/vfs_lookup.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_quota.c:382\nerror: bsd/vfs/vfs_quota.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_subr.c:10995\nerror: bsd/vfs/vfs_subr.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_syscalls.c:7261\nerror: bsd/vfs/vfs_syscalls.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_vnops.c:964\nerror: bsd/vfs/vfs_vnops.c: patch does not apply\nerror: patch failed: bsd/vm/vm_unix.c:2538\nerror: bsd/vm/vm_unix.c: patch does not apply\nerror: patch failed: config/MASTER.arm64.bcm2837:16\nerror: config/MASTER.arm64.bcm2837: patch does not apply\nerror: patch failed: iokit/Kernel/IOService.cpp:5179\nerror: iokit/Kernel/IOService.cpp: patch does not apply\nerror: patch failed: iokit/KernelConfigTables.cpp:39\nerror: iokit/KernelConfigTables.cpp: patch does not apply\nerror: patch failed: libkern/conf/files:109\nerror: libkern/conf/files: patch does not apply\nerror: patch failed: makedefs/MakeInc.cmd:275\nerror: makedefs/MakeInc.cmd: patch does not apply\nerror: patch failed: makedefs/MakeInc.def:60\nerror: makedefs/MakeInc.def: patch does not apply\nerror: patch failed: osfmk/arm/arm_init.c:362\nerror: osfmk/arm/arm_init.c: patch does not apply\nerror: patch failed: osfmk/arm/pmap/pmap.c:4676\nerror: osfmk/arm/pmap/pmap.c: patch does not apply\nerror: patch failed: osfmk/arm/pmap/pmap.h:112\nerror: osfmk/arm/pmap/pmap.h: patch does not apply\nerror: patch failed: osfmk/arm64/cpu.c:568\nerror: osfmk/arm64/cpu.c: patch does not apply\nerror: patch failed: osfmk/arm64/start.s:143\nerror: osfmk/arm64/start.s: patch does not apply\nerror: patch failed: osfmk/conf/files.arm64:25\nerror: osfmk/conf/files.arm64: patch does not apply\nerror: patch failed: osfmk/kern/kalloc.h:821\nerror: osfmk/kern/kalloc.h: patch does not apply\nerror: patch failed: osfmk/kern/percpu.h:236\nerror: osfmk/kern/percpu.h: patch does not apply\nerror: patch failed: osfmk/kern/sched_clutch.c:3204\nerror: osfmk/kern/sched_clutch.c: patch does not apply\nerror: patch failed: osfmk/kern/work_interval.c:683\nerror: osfmk/kern/work_interval.c: patch does not apply\nerror: patch failed: pexpert/pexpert/arm64/board_config.h:91\nerror: pexpert/pexpert/arm64/board_config.h: patch does not apply\nerror: patch failed: security/mac_vfs_subr.c:167\nerror: security/mac_vfs_subr.c: patch does not apply\n",
+    "files": {
+      "osfmk/arm/arm_init.c": "cbd261f3ab9d28eda490a1cf13cd3619fdd04af13b4490ec5008c27e0c97f742",
+      "bsd/kern/mach_loader.c": "80b823f82505569219bc17b9509a0723d1216437f575b8d6db867edb80645304",
+      "osfmk/arm/commpage/commpage.c": "2488f6e57fbb93c3cc8b4a718e06f895b8c83a942fb584d02a587fe42a5f12b8",
+      "osfmk/vm/vm_shared_region.c": "6c2e7ea7ebe2e807ebadc699a1888877f35355aba994d9a1afe27223a2f9d889",
+      "osfmk/vm/vm_shared_region_pager.c": "1c5db57a3f9a061e0faa34a7488d2105622c2dba5482bd6af9666469bfeb8a7a"
+    }
+  },
+  "patch_application": {
+    "xnu8796": {
+      "returncode": 0,
+      "applies": true,
+      "rejected_paths": [],
+      "stderr": ""
+    },
+    "xnu10063": {
+      "returncode": 1,
+      "applies": false,
+      "rejected_paths": [
+        "bsd/conf/files",
+        "bsd/kern/decmpfs.c",
+        "bsd/kern/kern_exec.c",
+        "bsd/kern/kern_memorystatus.c",
+        "bsd/kern/kpi_socket.c",
+        "bsd/kern/sys_generic.c",
+        "bsd/kern/uipc_syscalls.c",
+        "bsd/nfs/nfs_serv.c",
+        "bsd/sys/uio_internal.h",
+        "bsd/vfs/vfs_attrlist.c",
+        "bsd/vfs/vfs_conf.c",
+        "bsd/vfs/vfs_lookup.c",
+        "bsd/vfs/vfs_quota.c",
+        "bsd/vfs/vfs_subr.c",
+        "bsd/vfs/vfs_syscalls.c",
+        "bsd/vfs/vfs_vnops.c",
+        "config/MASTER.arm64.bcm2837",
+        "iokit/KernelConfigTables.cpp",
+        "libkern/conf/files",
+        "makedefs/MakeInc.cmd",
+        "makedefs/MakeInc.def",
+        "osfmk/arm/arm_init.c",
+        "osfmk/arm64/cpu.c",
+        "osfmk/conf/files.arm64",
+        "osfmk/kern/kalloc.h",
+        "osfmk/kern/percpu.h",
+        "osfmk/kern/sched_clutch.c",
+        "osfmk/kern/work_interval.c",
+        "security/mac_vfs_subr.c"
+      ],
+      "stderr": "error: patch failed: bsd/conf/files:109\nerror: bsd/conf/files: patch does not apply\nerror: patch failed: bsd/kern/decmpfs.c:515\nerror: bsd/kern/decmpfs.c: patch does not apply\nerror: patch failed: bsd/kern/kern_exec.c:2640\nerror: bsd/kern/kern_exec.c: patch does not apply\nerror: patch failed: bsd/kern/kern_memorystatus.c:222\nerror: bsd/kern/kern_memorystatus.c: patch does not apply\nerror: patch failed: bsd/kern/kpi_socket.c:727\nerror: bsd/kern/kpi_socket.c: patch does not apply\nerror: patch failed: bsd/kern/sys_generic.c:303\nerror: bsd/kern/sys_generic.c: patch does not apply\nerror: patch failed: bsd/kern/uipc_syscalls.c:3561\nerror: bsd/kern/uipc_syscalls.c: patch does not apply\nerror: patch failed: bsd/nfs/nfs_serv.c:769\nerror: bsd/nfs/nfs_serv.c: patch does not apply\nerror: patch failed: bsd/sys/uio_internal.h:170\nerror: bsd/sys/uio_internal.h: patch does not apply\nerror: patch failed: bsd/vfs/vfs_attrlist.c:878\nerror: bsd/vfs/vfs_attrlist.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_conf.c:103\nerror: bsd/vfs/vfs_conf.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_lookup.c:1670\nerror: bsd/vfs/vfs_lookup.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_quota.c:382\nerror: bsd/vfs/vfs_quota.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_subr.c:10995\nerror: bsd/vfs/vfs_subr.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_syscalls.c:7261\nerror: bsd/vfs/vfs_syscalls.c: patch does not apply\nerror: patch failed: bsd/vfs/vfs_vnops.c:964\nerror: bsd/vfs/vfs_vnops.c: patch does not apply\nerror: patch failed: config/MASTER.arm64.bcm2837:16\nerror: config/MASTER.arm64.bcm2837: patch does not apply\nerror: patch failed: iokit/KernelConfigTables.cpp:39\nerror: iokit/KernelConfigTables.cpp: patch does not apply\nerror: patch failed: libkern/conf/files:109\nerror: libkern/conf/files: patch does not apply\nerror: patch failed: makedefs/MakeInc.cmd:275\nerror: makedefs/MakeInc.cmd: patch does not apply\nerror: patch failed: makedefs/MakeInc.def:60\nerror: makedefs/MakeInc.def: patch does not apply\nerror: patch failed: osfmk/arm/arm_init.c:362\nerror: osfmk/arm/arm_init.c: patch does not apply\nerror: patch failed: osfmk/arm64/cpu.c:568\nerror: osfmk/arm64/cpu.c: patch does not apply\nerror: patch failed: osfmk/conf/files.arm64:25\nerror: osfmk/conf/files.arm64: patch does not apply\nerror: patch failed: osfmk/kern/kalloc.h:821\nerror: osfmk/kern/kalloc.h: patch does not apply\nerror: patch failed: osfmk/kern/percpu.h:236\nerror: osfmk/kern/percpu.h: patch does not apply\nerror: patch failed: osfmk/kern/sched_clutch.c:3204\nerror: osfmk/kern/sched_clutch.c: patch does not apply\nerror: patch failed: osfmk/kern/work_interval.c:683\nerror: osfmk/kern/work_interval.c: patch does not apply\nerror: patch failed: security/mac_vfs_subr.c:167\nerror: security/mac_vfs_subr.c: patch does not apply\n"
+    }
+  },
+  "host_apfs": {
+    "format_compile": "",
+    "format_execute": "apfs_prange\tsizeof\t16\napfs_prange.pr_start_paddr\t0\t8\napfs_prange.pr_block_count\t8\t8\napfs_obj_phys\tsizeof\t32\napfs_obj_phys.o_cksum\t0\t8\napfs_obj_phys.o_oid\t8\t8\napfs_obj_phys.o_xid\t16\t8\napfs_obj_phys.o_type\t24\t4\napfs_obj_phys.o_subtype\t28\t4\napfs_nx_superblock\tsizeof\t1408\napfs_nx_superblock.nx_magic\t32\t4\napfs_nx_superblock.nx_block_size\t36\t4\napfs_nx_superblock.nx_block_count\t40\t8\napfs_nx_superblock.nx_features\t48\t8\napfs_nx_superblock.nx_readonly_compatible_features\t56\t8\napfs_nx_superblock.nx_incompatible_features\t64\t8\napfs_nx_superblock.nx_uuid\t72\t16\napfs_nx_superblock.nx_next_oid\t88\t8\napfs_nx_superblock.nx_next_xid\t96\t8\napfs_nx_superblock.nx_xp_desc_blocks\t104\t4\napfs_nx_superblock.nx_xp_data_blocks\t108\t4\napfs_nx_superblock.nx_xp_desc_base\t112\t8\napfs_nx_superblock.nx_xp_data_base\t120\t8\napfs_nx_superblock.nx_xp_desc_next\t128\t4\napfs_nx_superblock.nx_xp_data_next\t132\t4\napfs_nx_superblock.nx_xp_desc_index\t136\t4\napfs_nx_superblock.nx_xp_desc_len\t140\t4\napfs_nx_superblock.nx_xp_data_index\t144\t4\napfs_nx_superblock.nx_xp_data_len\t148\t4\napfs_nx_superblock.nx_spaceman_oid\t152\t8\napfs_nx_superblock.nx_omap_oid\t160\t8\napfs_nx_superblock.nx_reaper_oid\t168\t8\napfs_nx_superblock.nx_max_file_systems\t180\t4\napfs_nx_superblock.nx_fs_oid\t184\t800\napfs_checkpoint_mapping\tsizeof\t40\napfs_checkpoint_mapping.cpm_type\t0\t4\napfs_checkpoint_mapping.cpm_oid\t24\t8\napfs_checkpoint_mapping.cpm_paddr\t32\t8\napfs_checkpoint_map_phys.cpm_flags\t32\t4\napfs_checkpoint_map_phys.cpm_count\t36\t4\napfs_checkpoint_map_phys.cpm_map\t40\t0\napfs_omap_phys\tsizeof\t88\napfs_omap_phys.om_flags\t32\t4\napfs_omap_phys.om_snap_count\t36\t4\napfs_omap_phys.om_tree_type\t40\t4\napfs_omap_phys.om_snapshot_tree_type\t44\t4\napfs_omap_phys.om_tree_oid\t48\t8\napfs_omap_phys.om_snapshot_tree_oid\t56\t8\napfs_omap_key\tsizeof\t16\napfs_omap_key.ok_oid\t0\t8\napfs_omap_key.ok_xid\t8\t8\napfs_omap_val\tsizeof\t16\napfs_omap_val.ov_flags\t0\t4\napfs_omap_val.ov_size\t4\t4\napfs_omap_val.ov_paddr\t8\t8\napfs_wrapped_meta_crypto_state\tsizeof\t20\napfs_modified_by\tsizeof\t48\napfs_superblock\tsizeof\t1056\napfs_superblock.apfs_magic\t32\t4\napfs_superblock.apfs_fs_index\t36\t4\napfs_superblock.apfs_features\t40\t8\napfs_superblock.apfs_readonly_compatible_features\t48\t8\napfs_superblock.apfs_incompatible_features\t56\t8\napfs_superblock.apfs_unmount_time\t64\t8\napfs_superblock.apfs_fs_reserve_block_count\t72\t8\napfs_superblock.apfs_fs_quota_block_count\t80\t8\napfs_superblock.apfs_fs_alloc_count\t88\t8\napfs_superblock.apfs_meta_crypto\t96\t20\napfs_superblock.apfs_root_tree_type\t116\t4\napfs_superblock.apfs_extentref_tree_type\t120\t4\napfs_superblock.apfs_snap_meta_tree_type\t124\t4\napfs_superblock.apfs_omap_oid\t128\t8\napfs_superblock.apfs_root_tree_oid\t136\t8\napfs_superblock.apfs_extentref_tree_oid\t144\t8\napfs_superblock.apfs_snap_meta_tree_oid\t152\t8\napfs_superblock.apfs_revert_to_xid\t160\t8\napfs_superblock.apfs_revert_to_sblock_oid\t168\t8\napfs_superblock.apfs_next_obj_id\t176\t8\napfs_superblock.apfs_num_files\t184\t8\napfs_superblock.apfs_num_directories\t192\t8\napfs_superblock.apfs_num_symlinks\t200\t8\napfs_superblock.apfs_num_other_fsobjects\t208\t8\napfs_superblock.apfs_num_snapshots\t216\t8\napfs_superblock.apfs_total_blocks_alloced\t224\t8\napfs_superblock.apfs_total_blocks_freed\t232\t8\napfs_superblock.apfs_vol_uuid\t240\t16\napfs_superblock.apfs_last_mod_time\t256\t8\napfs_superblock.apfs_fs_flags\t264\t8\napfs_superblock.apfs_formatted_by\t272\t48\napfs_superblock.apfs_modified_by\t320\t384\napfs_superblock.apfs_volname\t704\t256\napfs_superblock.apfs_next_doc_id\t960\t4\napfs_superblock.apfs_role\t964\t2\napfs_nloc\tsizeof\t4\napfs_nloc.off\t0\t2\napfs_nloc.len\t2\t2\napfs_kvloc\tsizeof\t8\napfs_kvoff\tsizeof\t4\napfs_btree_node_phys\tsizeof\t56\napfs_btree_node_phys.btn_flags\t32\t2\napfs_btree_node_phys.btn_level\t34\t2\napfs_btree_node_phys.btn_nkeys\t36\t4\napfs_btree_node_phys.btn_table_space\t40\t4\napfs_btree_node_phys.btn_free_space\t44\t4\napfs_btree_node_phys.btn_key_free_list\t48\t4\napfs_btree_node_phys.btn_val_free_list\t52\t4\napfs_btree_node_phys.btn_data\t56\t0\napfs_btree_info_fixed\tsizeof\t16\napfs_btree_info\tsizeof\t40\napfs_btree_info.bt_fixed\t0\t16\napfs_btree_info.bt_longest_key\t16\t4\napfs_btree_info.bt_longest_val\t20\t4\napfs_btree_info.bt_key_count\t24\t8\napfs_btree_info.bt_node_count\t32\t8\napfs_j_key\tsizeof\t8\napfs_j_inode_val\tsizeof\t92\napfs_j_inode_val.parent_id\t0\t8\napfs_j_inode_val.private_id\t8\t8\napfs_j_inode_val.create_time\t16\t8\napfs_j_inode_val.mod_time\t24\t8\napfs_j_inode_val.change_time\t32\t8\napfs_j_inode_val.access_time\t40\t8\napfs_j_inode_val.internal_flags\t48\t8\napfs_j_inode_val.nchildren\t56\t4\napfs_j_inode_val.default_protection_class\t60\t4\napfs_j_inode_val.write_generation_counter\t64\t4\napfs_j_inode_val.bsd_flags\t68\t4\napfs_j_inode_val.owner\t72\t4\napfs_j_inode_val.group\t76\t4\napfs_j_inode_val.mode\t80\t2\napfs_j_inode_val.pad1\t82\t2\napfs_j_inode_val.uncompressed_size\t84\t8\napfs_j_inode_val.xfields\t92\t0\napfs_j_drec_key.name_len\t8\t2\napfs_j_drec_key.name\t10\t0\napfs_j_drec_hashed_key.name_len_and_hash\t8\t4\napfs_j_drec_hashed_key.name\t12\t0\napfs_j_drec_val.file_id\t0\t8\napfs_j_drec_val.date_added\t8\t8\napfs_j_drec_val.flags\t16\t2\napfs_j_drec_val.xfields\t18\t0\napfs_j_xattr_key.name_len\t8\t2\napfs_j_xattr_key.name\t10\t0\napfs_j_xattr_val.flags\t0\t2\napfs_j_xattr_val.xdata_len\t2\t2\napfs_j_xattr_val.xdata\t4\t0\napfs_j_dstream\tsizeof\t40\napfs_j_dstream.size\t0\t8\napfs_j_dstream.alloced_size\t8\t8\napfs_j_dstream.default_crypto_id\t16\t8\napfs_j_dstream.total_bytes_written\t24\t8\napfs_j_dstream.total_bytes_read\t32\t8\napfs_j_xattr_dstream\tsizeof\t48\napfs_j_xattr_dstream.xattr_obj_id\t0\t8\napfs_j_xattr_dstream.dstream\t8\t40\napfs_j_file_extent_key.logical_addr\t8\t8\napfs_j_file_extent_val.len_and_flags\t0\t8\napfs_j_file_extent_val.phys_block_num\t8\t8\napfs_j_file_extent_val.crypto_id\t16\t8\napfs_j_phys_ext_val.len_and_kind\t0\t8\napfs_j_phys_ext_val.owning_obj_id\t8\t8\napfs_j_phys_ext_val.refcnt\t16\t4\napfs_j_sibling_key.sibling_id\t8\t8\napfs_j_sibling_val.parent_id\t0\t8\napfs_j_sibling_val.name_len\t8\t2\napfs_j_sibling_val.name\t10\t0\napfs_xf_blob\tsizeof\t4\napfs_xf_blob.xf_num_exts\t0\t2\napfs_xf_blob.xf_used_data\t2\t2\napfs_xf_blob.xf_data\t4\t0\napfs_x_field\tsizeof\t4\napfs_x_field.x_type\t0\t1\napfs_x_field.x_flags\t1\t1\napfs_x_field.x_size\t2\t2\napfs_decmpfs_disk_header.compression_magic\t0\t4\napfs_decmpfs_disk_header.compression_type\t4\t4\napfs_decmpfs_disk_header.uncompressed_size\t8\t8\napfs_decmpfs_disk_header.attr_bytes\t16\t0\n",
+    "format_check": "checked 119 field offsets and 19 structure sizes against apfs_format.h\nOK: the header and apfs.py agree on every one\n",
+    "sparse_check": "  ok    one extent, no hole\n  ok    a gap between two extents\n  ok    an extent whose physical block is zero reads as zeros\n  ok    a hole at the front\n  ok    a hole at the end\n  ok    no extents at all\n  ok    a multi-block extent\n  ok    the last extent is cut off by the file's size\n  ok    a gap of several blocks\nread_stream hole handling: 9 cases, 0 failed\n",
+    "kernel_stream_fetch_check": "  ok    whole blocks (1 requests, 12288 bytes)\n  ok    starts and ends inside blocks (3 requests, 12288 bytes)\n  ok    inside one block (1 requests, 4096 bytes)\n  ok    ends where a block does (2 requests, 8192 bytes)\n  ok    a hole at the front (2 requests, 8192 bytes)\n  ok    a hole between two runs (2 requests, 8192 bytes)\n  ok    a hole at the end (1 requests, 4096 bytes)\n  ok    no runs: all hole (0 requests, 0 bytes)\n  ok    eight runs, every one unaligned (13 requests, 69632 bytes)\nstream_fetch: 9 cases, 0 failed\n",
+    "fixture_build": "mkapfs.py: volume 0 \"Reuse\": 2 files, 2 directories, 1 symbolic links, 2 blocks of data (2 compressed in their resource fork, 0 whole in their attribute)\nmkapfs.py: /var/folders/rm/mfytnqc11_j31vzp61cr47fr0000gn/T/chiron-reuse-5iv8cv7c/fixture.apfs: 1024 blocks of 4096 bytes, 931 free\n",
+    "fixture_readback": {
+      "files": 2,
+      "pattern_bytes": 70001,
+      "compressed_bytes": 125000,
+      "image_bytes": 4194304,
+      "sha256": "9bb9418efb7d9bb21cc37d4325745b009981e9fa3df589e0cdaa59eae53fe317",
+      "scope": "upstream Python writer/reader and kernel C reader in host mode; not kernel VFS/pagein"
+    }
+  }
+}

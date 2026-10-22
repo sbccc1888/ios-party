@@ -1,0 +1,16 @@
+{
+  "schema": "hackios-c1-build-dependencies-v1",
+  "sdk": {
+    "repository": "https://github.com/theos/sdks.git",
+    "commit": "0222fd5413cf4b9af096f37b4621afa2688572f7",
+    "directory": "iPhoneOS16.5.sdk"
+  },
+  "toolchain": {
+    "url": "https://github.com/L1ghtmann/llvm-project/releases/download/test-210562a/iOSToolchain-x86_64.tar.xz",
+    "release_id": 120153181,
+    "asset_id": 124862108,
+    "asset_bytes": 86163280,
+    "source_tag_commit": "e99a150316ad22ad595d679c4a94e2d3938992cf",
+    "note": "Upstream supplies no asset digest; record the downloaded SHA-256 in each run."
+  }
+}

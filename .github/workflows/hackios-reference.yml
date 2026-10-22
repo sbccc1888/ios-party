@@ -1,0 +1,70 @@
+name: HackiOS 8796 + 20F66 reference
+
+on:
+  push:
+    branches: ['codex/hackios-8796-20f66']
+    paths:
+      - '.github/workflows/hackios-reference.yml'
+      - 'ci/hackios/**'
+      - 'research/hackios-reuse/sources.lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hackios-reference-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      HACKIOS_WORK: ${{ github.workspace }}/.cache/hackios-reference
+      HACKIOS_EVIDENCE: ${{ github.workspace }}/dist/hackios-reference
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install Linux build and emulation dependencies
+        run: |
+          if [ "$RUNNER_ENVIRONMENT" = github-hosted ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup
+          fi
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang lld llvm flex bison m4 perl autoconf automake \
+            curl xz-utils libxml2-dev libssl-dev zlib1g-dev pkg-config libtinfo6 \
+            7zip qemu-system-arm qemu-efi-aarch64 python3-pil
+          if ! command -v 7z >/dev/null; then
+            sudo ln -s "$(command -v 7zz)" /usr/local/bin/7z
+          fi
+          df -h "$RUNNER_TEMP"
+          free -m
+      - name: Prepare locked source workspace and cross toolchain
+        run: python3 ci/hackios/cloud.py prepare --work "$HACKIOS_WORK" --evidence "$HACKIOS_EVIDENCE"
+      - name: Build fresh 8796 kernel and fetch verified 20F66 files
+        run: python3 ci/hackios/cloud.py build-fetch --work "$HACKIOS_WORK" --evidence "$HACKIOS_EVIDENCE"
+      - name: Build the original APFS userland recipe
+        run: python3 ci/hackios/cloud.py images --work "$HACKIOS_WORK" --evidence "$HACKIOS_EVIDENCE"
+      - name: Save build and target identity evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hackios-reference-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/hackios-reference/
+          retention-days: 7
+          compression-level: 1
+      - name: Run A76 reference QEMU and capture screens and input
+        run: python3 ci/hackios/cloud.py qemu --work "$HACKIOS_WORK" --evidence "$HACKIOS_EVIDENCE"
+      - name: Evaluate runtime milestones without granting hardware qualification
+        if: always()
+        run: python3 ci/hackios/cloud.py summarize --work "$HACKIOS_WORK" --evidence "$HACKIOS_EVIDENCE"
+      - name: Preserve logs, source kernel, identities and screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hackios-reference-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/hackios-reference/
+          retention-days: 7
+          compression-level: 1
