@@ -1,9 +1,14 @@
 import importlib.util
+import hashlib
+import json
+import os
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +26,47 @@ recipes = load("source_recipes", "ci/prepare_runtime.py")
 
 
 class SourceTraceTests(unittest.TestCase):
+    def test_manifest_names_the_boot_image_and_separates_packaging_provenance(self):
+        module = load("source_packaging", "ci/package_source_trace.py")
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            runtime, firmware, output = directory / "runtime", directory / "firmware", directory / "output"
+            runtime.mkdir()
+            firmware.mkdir()
+            (runtime / "source-trace-build.json").write_text(json.dumps({
+                "build_id": "CT-HOST-PACK", "run_id": "kernel-run", "source_commit": "kernel-commit",
+            }))
+            for name in ("chiron-source-overlay.json",):
+                (runtime / name).write_text("{}")
+            (runtime / "kernel-symbols.txt").write_text("test symbols\n")
+            (runtime / "chiron-trace.bin").write_bytes(bytes(65536))
+            for name in ("source-trace-tests", "source-trace-captures", "kernel.dSYM", "observer-source"):
+                (runtime / name).mkdir()
+            (runtime / "source-trace-tests/verification.json").write_text("{}")
+            image = b"ANDROID! qualified source image fixture"
+
+            def build_fixture(command, check):
+                destination = Path(command[command.index("--output") + 1])
+                destination.mkdir()
+                if str(command[1]).endswith("build_ram_boot.py"):
+                    (destination / "ram-transport-report.json").write_text('{"type":"fat-report"}')
+                else:
+                    (destination / "chiron-ram-init-zero-tail.img").write_bytes(image)
+                    (destination / "zero-tail-report.json").write_text('{"type":"transport-report"}')
+
+            arguments = ["package", "--runtime", str(runtime), "--firmware", str(firmware),
+                         "--output", str(output)]
+            with patch.object(sys, "argv", arguments), patch.object(module.subprocess, "run", build_fixture), \
+                    patch.dict(os.environ, {"GITHUB_SHA": "packaging-commit", "GITHUB_RUN_ID": "packaging-run"}):
+                module.main()
+            manifest = json.loads((output / "manifest.json").read_text())
+            self.assertEqual(manifest["image"], "CT-HOST-PACK.img")
+            self.assertEqual(manifest["image_sha256"], hashlib.sha256(image).hexdigest())
+            self.assertEqual(manifest["image_bytes"], len(image))
+            self.assertEqual(manifest["source_commit"], "kernel-commit")
+            self.assertEqual(manifest["packaging_source_commit"], "packaging-commit")
+            self.assertNotEqual(manifest["image"], "fat-verification.json")
+
     @unittest.skipUnless(shutil.which("clang"), "clang required")
     def test_ring_fault_panic_mapping_and_host_display_bounds(self):
         with tempfile.TemporaryDirectory() as temporary:

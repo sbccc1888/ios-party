@@ -34,22 +34,25 @@ def main():
     ], check=True)
     build = json.loads((args.runtime / "source-trace-build.json").read_text())
     proof = json.loads((args.runtime / "source-trace-tests/verification.json").read_text())
-    name = build["build_id"] + ".img"
-    shutil.copyfile(transport / "chiron-ram-init-zero-tail.img", args.output / name)
+    image_name = build["build_id"] + ".img"
+    shutil.copyfile(transport / "chiron-ram-init-zero-tail.img", args.output / image_name)
     symbols = args.runtime / "kernel-symbols.txt"
     shutil.copyfile(symbols, args.output / symbols.name)
-    for origin, name in (
+    for origin, report_name in (
         (transport / "zero-tail-report.json", "transport-verification.json"),
         (source / "ram-transport-report.json", "fat-verification.json"),
     ):
-        shutil.copyfile(origin, args.output / name)
+        shutil.copyfile(origin, args.output / report_name)
     manifest = {
         "schema": 1, "build_id": build["build_id"],
-        "run_id": os.environ.get("GITHUB_RUN_ID"), "source_commit": os.environ.get("GITHUB_SHA"),
+        "run_id": build["run_id"], "source_commit": build["source_commit"],
+        "packaging_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "packaging_source_commit": os.environ.get("GITHUB_SHA"),
         "efi_run_id": os.environ.get("CHIRON_EFI_RUN"),
         "firmware_run_id": os.environ.get("CHIRON_FIRMWARE_RUN"),
-        "image": name, "image_sha256": hashlib.sha256((args.output / name).read_bytes()).hexdigest(),
-        "image_bytes": (args.output / name).stat().st_size,
+        "image": image_name,
+        "image_sha256": hashlib.sha256((args.output / image_name).read_bytes()).hexdigest(),
+        "image_bytes": (args.output / image_name).stat().st_size,
         "kernel_binary_instruction_patching": False, "qemu_source_trace_proof": proof,
         "baseline": json.loads((root / "diagnostics/baseline.json").read_text()),
         "upstream_sources": json.loads((root / "ci/sources.json").read_text()),
@@ -63,7 +66,7 @@ def main():
     shutil.copytree(args.runtime / "source-trace-captures", args.output / "qemu-logs/preflight-captures")
     shutil.copytree(args.runtime / "kernel.dSYM", args.output / "kernel.dSYM")
     shutil.copytree(args.runtime / "observer-source", args.output / "observer-source")
-    print(json.dumps({"image": name, "sha256": manifest["image_sha256"]}, indent=2))
+    print(json.dumps({"image": image_name, "sha256": manifest["image_sha256"]}, indent=2))
 
 
 if __name__ == "__main__":
