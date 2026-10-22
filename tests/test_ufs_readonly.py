@@ -44,7 +44,7 @@ class PolicyTests(unittest.TestCase):
         self.assertIsNotNone(compiler, "clang++ required for ARM64 compile check")
         with tempfile.TemporaryDirectory() as temp:
             subprocess.run([
-                compiler, "-target", "arm64-apple-darwin", "-std=c++14", "-ffreestanding",
+                compiler, "-target", "arm64-apple-darwin", "-std=c++14", "-ffreestanding", "-nostdinc++",
                 "-fno-exceptions", "-fno-rtti", "-Wall", "-Wextra", "-Werror",
                 "-c", str(DRIVER / "tests/CoreCompile.cpp"), "-o", str(Path(temp) / "core.o"),
             ], check=True)
