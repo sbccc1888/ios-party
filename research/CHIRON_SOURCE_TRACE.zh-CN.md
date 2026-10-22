@@ -6,7 +6,31 @@
 
 已取得的实机证据是诊断内核显示 `17`，即原始 `arm_vm_init` 已返回。照片不独立校验镜像哈希，尚无实机 PID 1 或完整 iOS 用户态的证据，也尚未确定失败原因。
 
-当前新增的源码通道和云构建模式处于实现与验证阶段。此前 QEMU 的 PID 1/POST 资格不能自动转移给新源码内核；必须重新执行全部资格检查后才生成上机镜像。旧的本地二进制插桩不再作为主线。
+源码通道已完成云端资格与交付复核。源码内核运行 `39726305878` 重新通过全部资格，交付打包运行 `39736014170` 只复用该内核，没有重新编译。旧的本地二进制插桩不再作为主线。设备仍待启动新镜像；此前设备故障原因没有被这次 QEMU 的受控测试自动确定。
+
+## 已验证交付
+
+```text
+Kernel build ID: CT-39726305878-1-bfaae879457f
+Kernel source: bfaae879457f5bce5b222d8aa97393a1225824bf
+Packaging source: 9525fa7a9d21554af98a70f901a3a2a1349e5c13
+Image: dist/source-trace-39736014170/CT-39726305878-1-bfaae879457f.img
+Bytes: 26,697,728
+SHA-256: 234ed79e9e5d29a79af24e4110f5fa513a6c8f8056aafb203a557ef0069a7ce0
+Kernel SHA-256: e0df2b09d270318c6190d4b1f12469a4147e85d5b0b544775870f0c318e853a5
+```
+
+本地已独立检查 manifest 正确指向 `.img`、Android 容器头、完整镜像哈希、FAT 内核哈希、内核内构建 ID、启动菜单标题一致，且手机启动配置没有 `chiron-trace-test`。22 项主线门禁和云端完整资格通过。此前已经跑过的 QEMU 资格未被假定继承，而是对当前内核重新取得。
+
+手机进入 fastboot 后：
+
+```sh
+fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/source-trace-39736014170/CT-39726305878-1-bfaae879457f.img
+```
+
+预期是带 `CT-39726305878-1-BFAAE879457F` 标题的连续日志，而不是单个 `XNU STAGE` 编号。记录最后日志；红色 `PANIC CALLER` 表示记录了 panic 原因并停止。`EXCEPTION - MAY BE RECOVERABLE` 不独立代表失败；若之后持续出现 `CHIRON RAM init: PID 1, 4K ABI, heartbeat`，说明测试 init 仍在运行。一条心跳本身不足以证明后续定时等待完成。
+
+manifest、正常启动/受控 panic/真实数据异常的可读日志、原始记录、实际 QEMU 屏幕、内核符号、dSYM 和观察器源码位于 `dist/source-trace-39736014170/`。当前 `fastboot devices` 为空，没有自动启动或重启手机。
 
 ## 固定输入
 

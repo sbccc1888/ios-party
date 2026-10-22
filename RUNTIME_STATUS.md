@@ -222,3 +222,7 @@ fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/boot-controls-24m/chir
 通道覆盖汇编入口和 MMU 过渡、初始化回调进入/返回、控制台、原生 EL1 异常和统一 panic 入口。记录含构建 ID、事件序号、函数地址、独立的最近异常寄存器及 panic 调用者。暂时失去显示时继续保留 RAM 日志；原生映射建立后继续显示。诊断 panic 在输出后停止，避免正常 panic 处理重启或覆盖画面。
 
 云端在原 POST 正反例和真实 PID 1 心跳资格之外，还必须验证真实 panic 文本及注入数据异常的 PC/ESR/FAR，采集原生 QEMU 屏幕、符号和 dSYM，全部通过后才能编号打包。当前仍未取得设备的明确故障原因；受控 QEMU 错误不等于手机的故障。后续构建状态见 [源码可观测性](research/CHIRON_SOURCE_TRACE.zh-CN.md)。
+
+源码编译及资格运行 `39726305878` 已通过：真实控制台两次心跳、POST 正反例、原生 framebuffer 输出、真实 panic 原因/调用者，以及来自 `_chiron_trace_test+0x44` 的数据异常（ESR=`0x96000005`、FAR=`0x1000`）。源内核 SHA-256 为 `e0df2b09d270318c6190d4b1f12469a4147e85d5b0b544775870f0c318e853a5`。
+
+修正 manifest 文件名引用后，仅复用上述已验证内核进行云端打包，运行 `39736014170` 已通过；本地独立验证了 `.img` 后缀/ANDROID 头、完整镜像 SHA、FAT 中的内核 SHA、构建 ID 和不存在注入参数。成品 `dist/source-trace-39736014170/CT-39726305878-1-bfaae879457f.img`，26,697,728 字节，SHA-256 为 `234ed79e9e5d29a79af24e4110f5fa513a6c8f8056aafb203a557ef0069a7ce0`。未检测到 fastboot 设备，未启动手机；真实设备的 PID 1 和故障原因仍未确认。
