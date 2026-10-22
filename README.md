@@ -14,6 +14,8 @@
 
 设备操作由用户执行：刷写、临时启动和重启均不由助手操作；助手负责源码、构建、产物校验和日志分析。
 
+下一阶段已并行实现：[用户态自检](research/CHIRON_USER_SELFTEST.zh-CN.md) 已在真实 XNU/QEMU 完成文件读取、两页匿名映射、独立子程序执行及退出回收，候选镜像为 `dist/source-trace-39756701933/CT-39756701933-1-3b4d3db21117.img`，仍待实机观察 `SELFTEST PASS`。[UFS 只读探针](research/CHIRON_UFS_READONLY.zh-CN.md) 已通过宿主测试和独立 XNU 归档编译；未链接、未执行硬件，仍缺退出 UEFI 后的电源/时钟、链路、DMA/SMMU 及独占交接资格。
+
 首轮内核、驱动库、EFI 和整合固件的远程编译均已通过。成品位置、哈希和验证边界见 [构建记录](BUILD_STATUS.md)。
 
 ## 构建方式

@@ -6,33 +6,35 @@
 
 最新实机照片 `IMG_20261022_162407.jpg` 显示 `CT-39745321134-1-783CC7E68F24` 和多轮自有 PID 1 心跳，已取得最小 4 KiB XNU 用户态运行证据。此前照片 `IMG_20261022_151546.jpg` 的最后可见日志为 `PE_create_console() enter`。照片不独立校验镜像完整哈希，也不证明长期稳定性、完整 iOS 用户态或此前停滞的精确根因。
 
-最新运行 `39745321134` 已编译修正后的源码内核，通过控制台早期路径、真实 PID 1 两次心跳、POST 正反例、panic 文本和注入异常资格，完成打包及本地交付复核，并取得用户提供的实机多轮心跳照片。旧运行 `39726305878` 的内核经 `39736014170` 打包，是控制台入口停留照片对应版本。新版本已继续执行至 init；仍未取得旧版本故障的实机 PC/异常证据。
+运行 `39745321134` 已编译修正后的源码内核，通过控制台早期路径、真实 PID 1 两次心跳、POST 正反例、panic 文本和注入异常资格，完成打包及本地交付复核，并取得用户提供的实机多轮心跳照片。旧运行 `39726305878` 的内核经 `39736014170` 打包，是控制台入口停留照片对应版本。新版本已继续执行至 init；仍未取得旧版本故障的实机 PC/异常证据。
+
+后续运行 `39756701933` 已在同一源码日志路线验证四项用户态自检并完成交付复核，当前候选更新如下；其新增功能尚待实机测试。上述实机照片仍对应此前 `39745321134` 基线。
 
 刷写、临时启动和重启由用户操作；助手负责源码、构建、校验和日志分析，不执行这些设备命令。
 
 ## 已验证交付
 
 ```text
-Kernel build ID: CT-39745321134-1-783cc7e68f24
-Kernel source: 783cc7e68f24969bd38134ef4bdd28836dbc4b39
-Packaging source: 783cc7e68f24969bd38134ef4bdd28836dbc4b39
-Image: dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img
+Kernel build ID: CT-39756701933-1-3b4d3db21117
+Kernel source: 3b4d3db21117bb4f65632ca5316a2793880bf820
+Packaging source: 3b4d3db21117bb4f65632ca5316a2793880bf820
+Image: dist/source-trace-39756701933/CT-39756701933-1-3b4d3db21117.img
 Bytes: 26,697,728
-SHA-256: 4d24f9f96c021dba3984bae40d9db61bca287c4f22a4bdb7f59ab48a7477ef0a
-Kernel SHA-256: 4fdd24494e423e52bf888bcc96e0f4036363caabd45d357496142b89778213f9
+SHA-256: 722d3732ae10b02fa855d2ef948e3b43555c82058c374626a6b6d95567cb44b1
+Kernel SHA-256: c822cf256e0b17ce984443ea23f90f62b5ac26ef8ad62abf200506f5c5931c9a
 ```
 
-本地已独立检查 manifest 正确指向 `.img`、Android 容器头和 SHA-1、完整镜像哈希、重建 FAT 及四个载荷哈希、内核 POST HMAC、内核内构建 ID、启动菜单标题一致，且手机启动配置没有 `chiron-trace-test`。本地重新解码原始 console/normal 缓冲并确认控制台返回和两次心跳，报告为 `local-verification.json`。23 项主线门禁及云端完整资格通过；64 位显示字段修正后也重新通过宿主/ARM64 检查。此前已经跑过的 QEMU 资格未被假定继承，而是对当前内核重新取得。
+本地已独立检查 manifest 正确指向 `.img`、Android 容器头和 SHA-1、完整镜像哈希、重建 FAT 及主/子程序和根卷哈希、内核 POST HMAC、内核内构建 ID、启动菜单标题一致，且手机启动配置没有 `chiron-trace-test`。本地重新解码原始 console/normal 缓冲并确认控制台返回、四项自检和两次心跳，报告为 `local-verification.json`。43 项本地主线门禁及云端完整资格通过。此前已经跑过的 QEMU 资格未被假定继承，而是对当前内核和载荷重新取得。
 
 以下为供用户自行执行的临时启动命令：
 
 ```sh
-fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img
+fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/source-trace-39756701933/CT-39756701933-1-3b4d3db21117.img
 ```
 
-预期是带 `CT-39745321134-1-783CC7E68F24` 标题的连续日志，而不是单个 `XNU STAGE` 编号。先观察 `panic DT region absent` 及 `PE_create_console returned`，再记录后续最后日志；红色 `PANIC CALLER` 表示记录了 panic 原因并停止。`EXCEPTION - MAY BE RECOVERABLE` 不独立代表失败；若之后出现两次 `CHIRON RAM init: PID 1, 4K ABI, heartbeat`，支持测试 init 完成两次定时等待。一条心跳本身不足以证明后续定时等待完成。
+预期标题为 `CT-39756701933-1-3B4D3DB21117`。当前候选依次执行文件读取、匿名映射、独立子程序执行和退出回收，持续心跳必须带 `SELFTEST PASS`。`SELFTEST FAIL` 后仍可能有基础心跳，不能记为自检通过。红色 `PANIC CALLER` 表示记录了 panic 原因并停止；`EXCEPTION - MAY BE RECOVERABLE` 不独立代表失败。一条心跳本身不足以证明后续定时等待完成。
 
-manifest、控制台早期/正常启动/受控 panic/真实数据异常的可读日志、原始记录、实际 QEMU 屏幕、内核符号、dSYM 和观察器源码位于 `dist/source-trace-39745321134/`。其中硬件状态字段反映构建/交付核验时刻，用户后续实机证据在下段单独记录，不覆写云端原始资格报告。
+manifest、控制台早期/正常启动/受控 panic/真实数据异常的可读日志、原始记录、实际 QEMU 屏幕、内核符号、dSYM、观察器及自检源码位于 `dist/source-trace-39756701933/`。本地重新解码确认通过位 `0xf`、child/wait PID=2、退出码 37、两次心跳，并校验双文件根镜像的各段与签名产物一致；报告为 `local-verification.json`。43 项本地门禁通过，新内核的全部 QEMU 资格重新取得。以下实机照片对应旧基线，不覆写当前候选的云端硬件状态字段。
 
 ## 实机心跳照片
 

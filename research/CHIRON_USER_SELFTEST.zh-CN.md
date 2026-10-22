@@ -2,7 +2,7 @@
 
 ## 状态与边界
 
-2026-10-22：步骤 2 的源码、独立签名 Mach-O 构建、容器及指令级测试已实现。
+2026-10-22：步骤 2 的源码、独立签名 Mach-O 构建、容器及指令级测试已实现，云运行 `39756701933` 已通过真实 XNU/QEMU 执行及完整交付核验。
 既有 MIX 2 实机证据是旧版 init 的 PID 1 / 4 KiB / 多轮心跳；
 新增自检尚无实机观察。本文件不把宿主机模拟的系统调用响应算作 XNU 运行通过。
 父端负责云端内核构建、QEMU 资格测试、ADT 和最终打包；设备由用户操作。
@@ -225,6 +225,19 @@ FAT 及引导菜单的 `initrd` 改接 `Payloads/root.img`，
 `launchd.macho` 保留用于符号和证据审计。只有真实 QEMU 自检
 全部通过后才能将根镜像打包为下一版手机镜像。
 本实现没有触发构建、发布或任何设备操作。
+
+父端后续整合的运行 `39756701933` 已观察到 `_chiron_selftest_results`：
+`(1,15,15,0,2,2,9472,0)`，即四项通过、独立子进程 PID 2、
+等待同一 PID 并取得退出码 37。正常原始文本含四项 PASS 和两次
+`heartbeat SELFTEST PASS`，并通过原 POST 正反例、panic/注入异常资格。
+本地复核从镜像重建 FAT、提取根卷并核对主/子映像、重新解码原始记录，
+全部通过，实际 QEMU 屏幕也已查看。
+
+候选为 `dist/source-trace-39756701933/CT-39756701933-1-3b4d3db21117.img`，
+SHA-256 为 `722d3732ae10b02fa855d2ef948e3b43555c82058c374626a6b6d95567cb44b1`。
+`selftest-build.json` 中的 `qemu_runtime_qualified=false` 记录的是用户程序构建时刻；
+后续真实运行资格在 `manifest.json` 的 `qemu_source_trace_proof.user_selftest` 及
+`qemu-logs/verification.json` 中，不篡改原始构建报告。
 
 ## 本地验证
 

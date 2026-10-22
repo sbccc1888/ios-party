@@ -2,7 +2,7 @@
 
 本阶段已取得实机最小运行证据：2026-10-22，用户照片 `IMG_20261022_162407.jpg` 显示当前源码诊断构建及多轮自有 PID 1 心跳。对照 init 源码，支持 PID=1、页大小=4096 的检查通过、控制台写入和多轮定时等待返回。此前对应路径已在 Cortex-A53 QEMU 取得原始寄存器及计数资格。实机照片不证明长期稳定性、完整 iOS 用户态或此前停滞的精确根因。[固定基线源码日志](research/CHIRON_SOURCE_TRACE.zh-CN.md) 为当前主线，既有诊断结果保留在本文。
 
-最新源码诊断成品为 `dist/source-trace-39745321134/CT-39745321134-1-783cc7e68f24.img`。云端完整资格、本地交付复核及实机多轮心跳观察均已取得。上一版照片的最后可见日志为 `PE_create_console() enter`；新版本已继续执行至用户态 init，详见文末。刷写、临时启动和重启由用户操作，助手不执行这些设备命令。
+最新候选镜像为 `dist/source-trace-39756701933/CT-39756701933-1-3b4d3db21117.img`，新增用户态四项自检已通过真实 XNU/QEMU 和本地交付复核，仍待实机测试。已取得实机多轮心跳的是此前基线 `CT-39745321134-1-783cc7e68f24`。刷写、临时启动和重启由用户操作，助手不执行这些设备命令。
 
 ## 已有观察
 
@@ -248,3 +248,13 @@ fastboot boot /Users/mac/Documents/ChatGPT/ios_party/dist/boot-controls-24m/chir
 `scripts/chiron-init.S` 仅在 `getpid` 返回 1、页大小查询返回 4096、`/dev/console` 打开成功后进入心跳写入；每次完整写入后执行一秒 `select` 超时等待，返回成功才继续。多轮可见心跳支持最小 XNU 用户态 PID 1 和定时等待续接在实机工作，已越过此前控制台入口的最后可见停点。照片未给出精确等待间隔、IRQ 计数或连续运行总时长，不将 QEMU 的计数移记为实机结果。
 
 本轮可记为“实机最小 4 KiB XNU + 自有 PID 1 心跳通过”。完整 iOS 用户态、长期稳定性和原生外设功能仍需分别验证；这次通过也不单独确定旧版停滞的精确 PC 或硬件故障机制。云端 manifest 与 `local-verification.json` 保持构建时记录，实机证据另记于本文。用户明确由其负责刷写；后续临时启动和重启也交由用户操作。
+
+## 并行用户态自检与 UFS 只读准备
+
+两个子 agent 分别实现用户态自检和独立 UFS 只读探针，父端整合构建、观测和打包门禁。43 项本地测试通过，涵盖新用户程序的真实 ARM64 指令/模拟 SVC 故障路径、只读命令白名单和基于原采集 GPT 的传输模型；这些宿主测试不替代 XNU 或设备资格。运行 `39753789455` 在 Linux 交叉编译的标准库头搜索上失败；`39755196461` 因缺少显式主程序路径，被探针在新增自检执行前拒绝。两处接线已修正，未从失败运行交付镜像。
+
+运行 `39756701933`，源码 `3b4d3db21117bb4f65632ca5316a2793880bf820`，已通过完整编译、真实 XNU/QEMU 自检、原 POST 正反例、panic/数据异常以及打包。结构化结果为 version=1、required=passed=`0xf`、failure=0、child PID=wait PID=2、wait status=`0x2500`（退出码 37）。实际输出含 file、mmap、independent exec、wait/reap 四项 PASS 和两次 `heartbeat SELFTEST PASS`；原始记录及屏幕均保存。
+
+候选镜像 `dist/source-trace-39756701933/CT-39756701933-1-3b4d3db21117.img`，26,697,728 字节，SHA-256 为 `722d3732ae10b02fa855d2ef948e3b43555c82058c374626a6b6d95567cb44b1`；内核 SHA-256 为 `c822cf256e0b17ce984443ea23f90f62b5ac26ef8ad62abf200506f5c5931c9a`。initrd 改用已实际测试的双文件 `N4KROOT` 根镜像。独立本地复核容器、FAT、主/子映像与根卷、POST HMAC、构建 ID、无注入参数及原始自检记录均通过，报告在同目录 `local-verification.json`。该版本尚无实机证据；正常心跳保留 `SELFTEST PASS/FAIL` 后缀，失败也可能继续基础心跳，不能仅凭 heartbeat 判为自检成功。
+
+同一云运行另行编译 `libChironUfsReadonly.a`，归档 SHA-256 为 `d017750c3e4dc7a29629002e2d47df128e5213177175afcf73750d5caf2d6c31`。本地核对普通 ARM64 对象、入口、源码和归档哈希，11 个未定义引用均可在当前内核符号表找到；未实际内核链接。归档位于 `dist/ufs-readonly-39756701933/`，不在上述手机镜像中执行。仍缺实际板级电源/时钟、链路、DMA/SMMU、独占及退出 Boot Services 的交接实现；缺条件时入口在 MMIO 前拒绝，不能宣称 UFS 已接通。

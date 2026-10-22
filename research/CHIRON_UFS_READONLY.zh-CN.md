@@ -2,7 +2,7 @@
 
 日期：2026-10-22。范围：MSM8998 v2.1 / Chiron，现有 4 KiB 单核 RAM init 心跳基线之外的独立诊断选项。
 
-当前交付包含可执行的 UFSHCI 单槽传输核心、XNU 入口源码、单翻译单元归档构建器、资源核对工具和离线故障注入测试。**尚未编译 XNU 入口归档、未链接到内核、未运行真实控制器；目前明确拒绝硬件执行。**本地只做驱动核心编译和主机测试，没有完整内核编译、云构建、设备命令、提交或推送。
+当前交付包含可执行的 UFSHCI 单槽传输核心、XNU 入口源码、单翻译单元归档构建器、资源核对工具和离线故障注入测试。**父端云运行 `39756701933` 已编译 XNU 入口归档；未链接到内核、未运行真实控制器，目前仍拒绝硬件执行。**本地仅编译驱动核心并做主机测试，父端负责后续云端整合；没有设备操作。
 
 ## 父端最小集成接口
 
@@ -11,6 +11,8 @@
 ```sh
 python3 ci/build_chiron_ufs_readonly.py --tree <已完成bootstrap编译的tree> --output <独立目录>
 ```
+
+若组装树不含原驱动快照，可另给 `--upstream <固定UniXNU源码目录>`，源文件哈希校验不变。构建开始即移除旧成功报告，失败不能沿用旧的 `driver-report.json`。
 
 产物为 `libChironUfsReadonly.a`、`ChironUfsReadonly.o`、`compile.log`、`driver-report.json`。构建器复用现有 `build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/iokit/DEVELOPMENT/IOCPU.cpo.json` 的真实编译参数，只编译新增驱动，不执行内核构建。先验证固定 NativeUfs 源码的 SHA-256；允许父端既有 `prepare_runtime.py` 对构建脚本的适配。普通 ARM64 Mach-O 和 `_chiron_ufs_readonly_probe` 定义均需检查通过才生成报告。
 
@@ -143,7 +145,9 @@ python3 -m unittest discover -s tests -p test_ufs_readonly.py -v
 python3 -m unittest discover -s tests -p test_ufs_readonly.py -k test_host_policy_without_capture -v
 ```
 
-ARM64 编译只实例化生产协议核心；主机模型替代 MMIO/cache/时钟，不证明 XNU API 链接、DMA coherency、MSM8998 或实机资格。本机没有 bootstrap `IOCPU.cpo.json` 和内核头闭包，XNU 包装层归档需由父端云构建验证，当前不能标为已编译成功。
+本地 ARM64 编译只实例化生产协议核心；主机模型替代 MMIO/cache/时钟，不证明 XNU API 链接、DMA coherency、MSM8998 或实机资格。父端在云运行 `39756701933` 使用实际 XNU 编译记录成功编译包装层，产物位于 `dist/ufs-readonly-39756701933/`。归档 SHA-256 为 `d017750c3e4dc7a29629002e2d47df128e5213177175afcf73750d5caf2d6c31`。
+
+本地核对源码/归档哈希、普通 ARM64 对象和 `_chiron_ufs_readonly_probe` 入口通过；归档的 11 个未定义引用均能在当前已资格内核符号表中找到。符号闭包核对不等于内核链接测试。报告继续保持 `linked_into_kernel=false`、`hardware_executed=false`、`board_handoff_qualified=false`；此归档没有接入用户态自检手机镜像。
 
 仍缺的实证：
 
@@ -151,6 +155,6 @@ ARM64 编译只实例化生产协议核心；主机模型替代 MMIO/cache/时�
 2. MSM8998 UFS 的真实 DMA stream/context 和当前固件 SMMU 状态；缺 `iommus` 不是 bypass 证明，不能套用 SM8550 stream `0x60` 或上下文。
 3. 父端提供专用 DMA 分配、有效 bus 映射及整次启动生命周期持有。
 4. 固件请求清空、host 独占及无中断竞争的交接证据。
-5. XNU 单驱动归档云编译/链接结果；然后才是用户操作设备得到的枚举、容量及 GPT 原始数据。
+5. 实际内核链接与板级调用；然后才是用户操作设备得到的枚举、容量及 GPT 原始数据。
 
 本交付没有实现完整冷启动的 GCC/PMIC/PHY/SMMU 驱动，不能声称 NativeUFS 已接通。它提供的实际可接入路径是：父端验证交接并传入 `Handoff` 后，使用 XNU 自己的 MMIO/cache/timer 运行通用 UFSHCI 请求；条件不成立时在入口拒绝。
