@@ -1,0 +1,82 @@
+name: MIX2 HackiOS phone image
+
+on:
+  push:
+    branches: ['codex/hackios-chiron']
+    paths:
+      - '.github/workflows/hackios-chiron-package.yml'
+      - 'ci/hackios/package-chiron.py'
+      - 'ci/hackios/phone_loader.py'
+      - 'ci/hackios/apply_chiron_usb.py'
+      - 'ci/hackios/build-chiron-entry.sh'
+      - 'package/ChironCiPkg/ChironHackios.*'
+      - 'tools/start_chiron_hackios.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  image:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PORT_RUN: '39905608161'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install only the EFI and image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential uuid-dev nasm clang lld llvm mtools dosfstools
+      - name: Build the MIX2 EFI bootstrap
+        run: bash ci/hackios/build-chiron-entry.sh
+      - name: Save the EFI bootstrap independently
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chiron-hackios-entry
+          path: dist/chiron-entry/
+          retention-days: 7
+      - name: Reuse the physical-qualified zero-tail firmware container
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-source-trace-39770335838-1
+          path: dist/chiron-boot-template
+          github-token: ${{ github.token }}
+          run-id: '39770335838'
+      - name: Wait for the constrained desktop runtime evidence
+        run: |
+          for n in $(seq 1 90); do
+            state=$(gh run view "$PORT_RUN" --repo "$GITHUB_REPOSITORY" --json status --jq .status)
+            if [ "$state" = completed ]; then break; fi
+            sleep 20
+          done
+          gh run download "$PORT_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name "chiron-hackios-$PORT_RUN" --dir dist/chiron-runtime
+      - name: Build the phone USB loader against the existing firmware transport
+        run: |
+          python3 ci/hackios/phone_loader.py --work "$RUNNER_TEMP/chiron-phone-loader" \
+            --phone dist/chiron-runtime/phone
+      - name: Replace the read-only FAT payload and verify the unchanged firmware
+        run: |
+          python3 ci/hackios/package-chiron.py \
+            --template dist/chiron-boot-template/CT-39770335838-1-775f3f2e4009.img \
+            --phone dist/chiron-runtime/phone \
+            --entry dist/chiron-entry/ChironHackios.efi \
+            --qualification dist/chiron-runtime/chiron-qualification.json \
+            --output dist/chiron-hackios-image
+          cp tools/start_chiron_hackios.py dist/chiron-hackios-image/
+      - name: Save the concrete MIX2 candidate and source evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: MIX2-HackiOS-8796
+          path: |
+            dist/chiron-hackios-image/
+            dist/chiron-entry/
+          retention-days: 7
+          compression-level: 1
