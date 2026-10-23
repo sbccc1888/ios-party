@@ -1,0 +1,16 @@
+{
+  "image_sha256": "80fa2a3c4fe521506596cfee70254d6f1fc7c2fbaa505ecf309d67d66d631dce",
+  "cloud_run_id": "39935222049",
+  "cloud_project_sha": "060456ac82257fcc0ec5226bcdbf78a2f8404910",
+  "legacy_sha1_valid": true,
+  "firmware_bytes_match_hk1": true,
+  "trailing_bytes_match_hk1": true,
+  "payload_bytes_match_hk1": true,
+  "entry_readback_verified": true,
+  "native_usb_loader_readback_verified": true,
+  "loader_source_reproduced": true,
+  "system_root_matches_previous_verified_volume": true,
+  "hardware_observed": false,
+  "hardware_boot_qualified": false,
+  "tests": "48 existing HackiOS tool tests passed"
+}
