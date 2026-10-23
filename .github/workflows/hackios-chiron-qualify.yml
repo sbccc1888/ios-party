@@ -1,0 +1,37 @@
+name: MIX2 HackiOS qualify
+
+on:
+  push:
+    branches: ['codex/hackios-chiron']
+    paths:
+      - '.github/workflows/hackios-chiron-qualify.yml'
+      - 'ci/hackios/qualify_chiron.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-pil
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-hackios-39918716948
+          path: dist/chiron-runtime
+          github-token: ${{ github.token }}
+          run-id: '39918716948'
+      - name: Qualify actual saved desktop and CPU register evidence
+        run: python3 ci/hackios/qualify_chiron.py --runtime dist/chiron-runtime
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chiron-hackios-${{ github.run_id }}
+          path: dist/chiron-runtime/
+          retention-days: 7
+          compression-level: 1
