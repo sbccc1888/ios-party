@@ -57,7 +57,7 @@ default = "chiron-hackios"
 autoload = false
 [[entry]]
 id = "chiron-hackios"
-title = "MIX2 HackiOS 8796 / iOS 16.5"
+title = "HK1"
 type = "efi"
 path = "/EFI/HackiOS/ChironHackios.efi"
 [[entry]]

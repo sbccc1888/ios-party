@@ -46,8 +46,13 @@ def main():
     else:
         devices = subprocess.check_output(["fastboot", "devices"], text=True)
         candidates = [line.split()[0] for line in devices.splitlines() if line.strip()]
-        if len(candidates) != 1:
-            raise RuntimeError("expected exactly one loader; specify --serial")
+        if not candidates:
+            raise RuntimeError(
+                "no fastboot device is visible; the HackiOS USB loader has not enumerated. "
+                "Check the phone's EFI/loader screen. --serial cannot fix zero devices."
+            )
+        if len(candidates) > 1:
+            raise RuntimeError("multiple fastboot devices are visible; specify --serial from: " + ", ".join(candidates))
         serial = candidates[0]
     if getvar(serial, "product") != "xnuloader" or getvar(serial, "board") != "chiron":
         raise RuntimeError("device is not the running chiron HackiOS loader")

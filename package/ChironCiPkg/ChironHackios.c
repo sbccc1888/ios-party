@@ -4,6 +4,7 @@
 #include <Protocol/BlockIo.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/DevicePathLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiApplicationEntryPoint.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -67,6 +68,23 @@ UsbSend(UINTN Size, CONST VOID *Buffer)
 STATIC CHIRON_USB_TRANSPORT mUsb = {1, UsbStart, UsbReceive, UsbSend};
 
 STATIC EFI_STATUS
+ShowFailure(CONST CHAR16 *Stage, EFI_STATUS Status)
+{
+  EFI_INPUT_KEY Key;
+  UINTN Index;
+  Print(L"\nHK1 FAIL %s\n%r  [%016lx]\n", Stage, Status, (UINT64)Status);
+  Print(L"Take a photo of this screen. Press a key to return.\n");
+  if (gST->ConIn != NULL && gST->ConIn->WaitForKey != NULL) {
+    while (gST->ConIn->ReadKeyStroke(gST->ConIn, &Key) == EFI_SUCCESS) { }
+    gBS->WaitForEvent(1, &gST->ConIn->WaitForKey, &Index);
+    gST->ConIn->ReadKeyStroke(gST->ConIn, &Key);
+  } else {
+    gBS->Stall(15000000);
+  }
+  return Status;
+}
+
+STATIC EFI_STATUS
 ReadPayload(EFI_FILE_PROTOCOL *Root)
 {
   EFI_FILE_PROTOCOL *File;
@@ -79,6 +97,7 @@ ReadPayload(EFI_FILE_PROTOCOL *Root)
 
   Status = Root->Open(Root, &File, L"\\EFI\\HackiOS\\payload.bin", EFI_FILE_MODE_READ, 0);
   if (EFI_ERROR(Status)) return Status;
+  Print(L"HK1: payload file found\n");
   Status = File->GetInfo(File, &gEfiFileInfoGuid, &InfoSize, NULL);
   if (Status != EFI_BUFFER_TOO_SMALL || InfoSize > 4096) {
     Status = EFI_COMPROMISED_DATA;
@@ -94,7 +113,10 @@ ReadPayload(EFI_FILE_PROTOCOL *Root)
   }
   Status = gBS->AllocatePages(AllocateAddress, EfiLoaderData,
                              EFI_SIZE_TO_PAGES(0x04000000), &Address);
-  if (EFI_ERROR(Status)) goto Done;
+  if (EFI_ERROR(Status)) {
+    Print(L"HK1: reserve 64 MiB at %lx failed: %r\n", Address, Status);
+    goto Done;
+  }
   Bytes = (UINTN)Info->FileSize;
   Status = File->Read(File, &Bytes, (VOID *)(UINTN)Address);
   Header = (UINT32 *)(UINTN)Address;
@@ -112,29 +134,21 @@ Done:
 }
 
 STATIC EFI_STATUS
-StartLoader(EFI_HANDLE Parent, EFI_FILE_PROTOCOL *Root)
+StartLoader(EFI_HANDLE Parent, EFI_HANDLE Volume)
 {
-  EFI_FILE_PROTOCOL *File;
-  VOID *Bytes;
-  UINTN Size = 1024 * 1024;
+  EFI_DEVICE_PATH_PROTOCOL *Path;
   EFI_HANDLE Image;
   EFI_STATUS Status;
 
-  Status = Root->Open(Root, &File, L"\\EFI\\HackiOS\\loader.efi", EFI_FILE_MODE_READ, 0);
-  if (EFI_ERROR(Status)) return Status;
-  Bytes = AllocatePool(Size);
-  if (Bytes == NULL) { File->Close(File); return EFI_OUT_OF_RESOURCES; }
-  Status = File->Read(File, &Size, Bytes);
-  File->Close(File);
-  if (!EFI_ERROR(Status) && Size > 512) {
-    Status = gBS->LoadImage(FALSE, Parent, NULL, Bytes, Size, &Image);
-    if (!EFI_ERROR(Status)) {
-      Print(L"Starting chiron HackiOS USB loader; UEFI remains resident.\n");
-      Status = gBS->StartImage(Image, NULL, NULL);
-    }
-  }
-  FreePool(Bytes);
-  return Status;
+  Path = FileDevicePath(Volume, L"\\EFI\\HackiOS\\loader.efi");
+  if (Path == NULL) return ShowFailure(L"LOADER PATH", EFI_OUT_OF_RESOURCES);
+  Print(L"HK1: loading loader from RAM filesystem\n");
+  Status = gBS->LoadImage(FALSE, Parent, Path, NULL, 0, &Image);
+  FreePool(Path);
+  if (EFI_ERROR(Status)) return ShowFailure(L"LOAD LOADER", Status);
+  Print(L"HK1: starting USB loader; UEFI remains resident\n");
+  Status = gBS->StartImage(Image, NULL, NULL);
+  return ShowFailure(L"START LOADER", Status);
 }
 
 EFI_STATUS EFIAPI
@@ -147,13 +161,13 @@ UefiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
   UINTN Index;
 
   (VOID)SystemTable;
-  Print(L"Chiron HackiOS 8796 / iOS 16.5\n");
+  Print(L"\nHK1 EFI ENTRY: chiron / 8796 / 20F66\n");
   Status = gBS->InstallProtocolInterface(&UsbHandle, &mChironUsbGuid,
                                         EFI_NATIVE_INTERFACE, &mUsb);
-  if (EFI_ERROR(Status)) return Status;
+  if (EFI_ERROR(Status)) return ShowFailure(L"INSTALL USB PROXY", Status);
   Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiSimpleFileSystemProtocolGuid,
                                   NULL, &Count, &Handles);
-  if (EFI_ERROR(Status)) return Status;
+  if (EFI_ERROR(Status)) return ShowFailure(L"ENUM FILESYSTEMS", Status);
   for (Index = 0; Index < Count; Index++) {
     EFI_BLOCK_IO_PROTOCOL *Block;
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *Fs;
@@ -166,14 +180,19 @@ UefiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     if (EFI_ERROR(Status)) continue;
     Status = ReadPayload(Root);
     if (!EFI_ERROR(Status)) {
-      Status = StartLoader(ImageHandle, Root);
+      Status = StartLoader(ImageHandle, Handles[Index]);
       Root->Close(Root);
       FreePool(Handles);
       return Status;
+    }
+    if (Status != EFI_NOT_FOUND) {
+      Root->Close(Root);
+      FreePool(Handles);
+      return ShowFailure(L"READ PAYLOAD", Status);
     }
     Root->Close(Root);
   }
   FreePool(Handles);
   Print(L"No valid HackiOS payload on the read-only RAM volume: %r\n", Status);
-  return EFI_NOT_FOUND;
+  return ShowFailure(L"FIND RAM PAYLOAD", EFI_NOT_FOUND);
 }
