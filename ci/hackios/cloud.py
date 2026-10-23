@@ -18,10 +18,18 @@ import sys
 import time
 import zlib
 
+from input_cache import InputCache, TOOLCHAIN_FILE, matches, records as cache_records
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCES = ROOT / "research/hackios-reuse/sources.lock.json"
 DEPS = ROOT / "ci/hackios/dependencies.lock.json"
+APPLE_LOCK = ROOT / "research/hackios-reuse/cloud-inputs-20F66.json"
+
+
+def input_cache(group):
+    directory = os.environ.get("HACKIOS_INPUT_CACHE")
+    return InputCache(Path(directory) / group) if directory else None
 
 
 def require_runner():
@@ -113,12 +121,18 @@ def prepare(work, evidence):
     (theos / "toolchain").mkdir()
     (theos / "sdks" / sdk["directory"]).symlink_to(work / "sdks" / sdk["directory"])
     archive = work / "toolchain.tar.xz"
-    command(["curl", "-fL", "--retry", "4", "--retry-all-errors", "-o", archive, deps["toolchain"]["url"]])
+    toolchain_pin, _ = cache_records(deps, json.loads(APPLE_LOCK.read_text()))
+    downloads = input_cache("toolchain")
+    if not downloads or not downloads.restore(TOOLCHAIN_FILE, archive, toolchain_pin):
+        command(["curl", "-fL", "--retry", "4", "--retry-all-errors", "-o", archive, deps["toolchain"]["url"]])
     if archive.stat().st_size != deps["toolchain"]["asset_bytes"]:
         raise RuntimeError("toolchain asset size changed")
     toolchain = digest(archive)
     if toolchain["sha256"] != deps["toolchain"]["sha256"]:
         raise RuntimeError("toolchain asset hash differs from the recorded cloud input")
+    if downloads:
+        downloads.publish(TOOLCHAIN_FILE, archive, toolchain_pin)
+        save(evidence / "cache-toolchain.json", {"events": downloads.events})
     command(["tar", "-xJf", archive, "-C", theos / "toolchain"])
     if not (theos / "toolchain/linux/iphone/bin/ld").exists():
         raise RuntimeError("toolchain did not contain the expected cctools linker")
@@ -145,26 +159,42 @@ def prepare(work, evidence):
 def fetch_apple(work, evidence):
     kernel = work / "kernel"
     ios = kernel / "ios165"
-    env = dict(os.environ, KEEP="1")
-    command(["python3", ios / "fetch-from-ipsw.py", "BuildManifest.plist", ios / "BuildManifest.plist"],
-            cwd=kernel, log=evidence / "fetch-buildmanifest.log")
-    manifest = plistlib.loads((ios / "BuildManifest.plist").read_bytes())
-    if manifest["ProductVersion"] != "16.5" or manifest["ProductBuildVersion"] != "20F66":
-        raise RuntimeError("IPSW BuildManifest is not iOS 16.5 / 20F66")
-    if not {"iPhone10,3", "iPhone10,6"} <= set(manifest["SupportedProductTypes"]):
-        raise RuntimeError("IPSW BuildManifest does not support the locked iPhone X identities")
-    command(["bash", ios / "fetch.sh"], cwd=kernel, env=env, log=evidence / "fetch-apple.log")
-    fetcher = load_module("hackios_ipsw_fetch", ios / "fetch-from-ipsw.py")
-    remotezip = load_module("sweet_remotezip", work / "sweet/tools/remotezip.py")
-    # The locked upstream fetcher already records the archive size.
-    remotezip.size_of = lambda url: fetcher.SIZE
-    entries = {entry[0]: entry for entry in remotezip.central_dir(fetcher.URL)}
+    _, pinned = cache_records(json.loads(DEPS.read_text()), json.loads(APPLE_LOCK.read_text()))
     members = {
         "096-04088-077.dmg": ios / "rootfs.dmg",
         "096-04666-078.dmg": ios / "cryptex-os.dmg",
         "096-03536-083.dmg": ios / "cryptex-app.dmg",
         "BuildManifest.plist": ios / "BuildManifest.plist",
     }
+    downloads = input_cache("apple/20F66")
+    if downloads:
+        for member, path in members.items():
+            downloads.restore(member, path, pinned[member])
+    env = dict(os.environ, KEEP="1")
+    if not members["BuildManifest.plist"].exists():
+        command(["python3", ios / "fetch-from-ipsw.py", "BuildManifest.plist", ios / "BuildManifest.plist"],
+                cwd=kernel, log=evidence / "fetch-buildmanifest.log")
+    if not matches(members["BuildManifest.plist"], pinned["BuildManifest.plist"]):
+        raise RuntimeError("BuildManifest differs from the pinned, previously verified Apple input")
+    manifest = plistlib.loads((ios / "BuildManifest.plist").read_bytes())
+    if manifest["ProductVersion"] != "16.5" or manifest["ProductBuildVersion"] != "20F66":
+        raise RuntimeError("IPSW BuildManifest is not iOS 16.5 / 20F66")
+    if not {"iPhone10,3", "iPhone10,6"} <= set(manifest["SupportedProductTypes"]):
+        raise RuntimeError("IPSW BuildManifest does not support the locked iPhone X identities")
+    try:
+        command(["bash", ios / "fetch.sh"], cwd=kernel, env=env, log=evidence / "fetch-apple.log")
+    finally:
+        # Preserve individually verified downloads even if extraction or the
+        # parallel kernel build fails. Partial downloads are never published.
+        if downloads:
+            for member, path in members.items():
+                downloads.publish(member, path, pinned[member])
+            save(evidence / "cache-apple.json", {"events": downloads.events})
+    fetcher = load_module("hackios_ipsw_fetch", ios / "fetch-from-ipsw.py")
+    remotezip = load_module("sweet_remotezip", work / "sweet/tools/remotezip.py")
+    # The locked upstream fetcher already records the archive size.
+    remotezip.size_of = lambda url: fetcher.SIZE
+    entries = {entry[0]: entry for entry in remotezip.central_dir(fetcher.URL)}
     verified = {}
     manifest_paths = {
         value.get("Info", {}).get("Path")
@@ -176,6 +206,8 @@ def fetch_apple(work, evidence):
         entry = entries[member]
         if record["bytes"] != entry[3] or record["crc32"] != f"{entry[5]:08x}":
             raise RuntimeError(f"IPSW member size/CRC mismatch: {member}")
+        if record["sha256"] != pinned[member]["sha256"]:
+            raise RuntimeError(f"IPSW member differs from the pinned SHA-256: {member}")
         if member.endswith(".dmg") and member not in manifest_paths:
             raise RuntimeError(f"downloaded disk image is not named in BuildManifest: {member}")
         verified[member] = record

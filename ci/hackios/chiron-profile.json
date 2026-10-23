@@ -1,0 +1,34 @@
+{
+  "schema": "hackios-chiron-port-v1",
+  "device": "chiron",
+  "kernel_arch": "armv8-a",
+  "pan": false,
+  "outline_atomics": false,
+  "cpu_count": 1,
+  "boot_mpidr": 0,
+  "observed_mpidrs": [0, 1, 2, 3, 256, 257, 258, 259],
+  "gicd": 396361728,
+  "gicr": 397410304,
+  "gicr_size": 1048576,
+  "virtual_timer_intid": 19,
+  "timer_frequency": 19200000,
+  "psci": "smc",
+  "framebuffer": {
+    "base": 2638217216,
+    "width": 1080,
+    "height": 2160,
+    "stride": 4320,
+    "gop_format": 1
+  },
+  "kernel_window_limit": 3154116608,
+  "resident_kernel_reserve": 520093696,
+  "payload_base": 4026531840,
+  "qemu": {
+    "cpu": "cortex-a53",
+    "physical_base": 4294967296,
+    "resident_root_base": 4429185024,
+    "guest_ram_gb": 7,
+    "guest_seconds": 720
+  },
+  "hardware_boot_qualified": false
+}

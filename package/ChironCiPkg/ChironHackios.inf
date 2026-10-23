@@ -1,0 +1,27 @@
+[Defines]
+  INF_VERSION = 0x0001001B
+  BASE_NAME = ChironHackios
+  FILE_GUID = 65B94891-083E-4307-B827-26B46C3E29D1
+  MODULE_TYPE = UEFI_APPLICATION
+  VERSION_STRING = 0.1
+  ENTRY_POINT = UefiMain
+
+[Sources]
+  ChironHackios.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseMemoryLib
+  MemoryAllocationLib
+
+[Protocols]
+  gEfiSimpleFileSystemProtocolGuid
+  gEfiBlockIoProtocolGuid
+
+[Guids]
+  gEfiFileInfoGuid

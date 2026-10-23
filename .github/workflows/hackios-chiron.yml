@@ -1,0 +1,78 @@
+name: MIX2 HackiOS port
+
+on:
+  push:
+    branches: ['codex/hackios-chiron']
+    paths:
+      - '.github/workflows/hackios-chiron.yml'
+      - 'ci/hackios/chiron*'
+      - 'ci/hackios/apply_chiron.py'
+      - 'ci/hackios/build-chiron-kernel.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hackios-chiron
+  cancel-in-progress: false
+
+jobs:
+  port:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      PORT_WORK: ${{ github.workspace }}/.cache/hackios-chiron
+      PORT_EVIDENCE: ${{ github.workspace }}/dist/hackios-chiron
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install build dependencies on the cloud runner
+        run: |
+          if [ "$RUNNER_ENVIRONMENT" = github-hosted ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup
+          fi
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          fi
+          sudo apt-get -o Acquire::http::Timeout=20 update
+          sudo apt-get -o Acquire::http::Timeout=20 install -y --no-install-recommends \
+            build-essential clang lld llvm flex bison m4 perl autoconf automake \
+            curl xz-utils uuid-dev libxml2-dev libssl-dev zlib1g-dev pkg-config \
+            libtinfo6 7zip qemu-system-arm qemu-efi-aarch64 ipxe-qemu python3-pil
+          if ! command -v 7z >/dev/null; then sudo ln -s "$(command -v 7zz)" /usr/local/bin/7z; fi
+      - name: Apply the measured chiron loader profile
+        run: python3 ci/hackios/chiron.py prepare --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
+      - name: Build native ARMv8-A kernel without PAN and prepare 20F66
+        run: python3 ci/hackios/chiron.py build-fetch --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
+      - name: Build original APFS closure and phone USB payload
+        run: python3 ci/hackios/chiron.py images --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
+      - name: Preserve build and phone-loader inputs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chiron-hackios-build-${{ github.run_id }}
+          path: dist/hackios-chiron/
+          retention-days: 7
+          compression-level: 1
+      - name: Run A53 with 4K granule and a 2.94GiB high-bank window
+        run: python3 ci/hackios/chiron.py qemu --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
+      - name: Qualify the constrained desktop
+        run: python3 ci/hackios/chiron.py summarize --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
+      - name: Preserve actual port runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chiron-hackios-${{ github.run_id }}
+          path: dist/hackios-chiron/
+          retention-days: 7
+          compression-level: 1
+      - name: Publish the selected system volume for resident USB transfer
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chiron-ios165-system
+          path: .cache/hackios-chiron/kernel/userland/system.apfs
+          retention-days: 7
+          compression-level: 0
