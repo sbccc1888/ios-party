@@ -8,8 +8,14 @@ on:
       - 'ci/hackios/package-chiron.py'
       - 'ci/hackios/phone_loader.py'
       - 'ci/hackios/apply_chiron_usb.py'
+      - 'ci/hackios/apply_chiron_memory.py'
+      - 'ci/hackios/memory_loader.inc'
+      - 'ci/hackios/apply_memory_policy.py'
+      - 'ci/hackios/build-memory-firmware.sh'
       - 'ci/hackios/build-chiron-entry.sh'
       - 'package/ChironCiPkg/ChironHackios.*'
+      - 'package/ChironCiPkg/ChironMemoryWindow.h'
+      - 'package/ChironCiPkg/ChironReserveWindow.inc'
       - 'tools/start_chiron_hackios.py'
   workflow_dispatch:
 
@@ -18,9 +24,65 @@ permissions:
   actions: read
 
 jobs:
-  image:
+  entry:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install EFI compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential uuid-dev nasm clang lld llvm
+      - name: Build memory ownership entry and unchanged read-only RAM driver
+        run: python3 -B -m unittest discover -s tests -p 'test_chiron_*.py' -v
+      - name: Compile EFI entry and RAM driver
+        run: bash ci/hackios/build-chiron-entry.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chiron-memory-entry-${{ github.run_id }}
+          path: dist/chiron-entry/
+          if-no-files-found: error
+          retention-days: 7
+  firmware:
+    needs: entry
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
+    env:
+      CHIRON_EFI_RUN: '39417919101'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-efi
+          path: dist/efi
+          github-token: ${{ github.token }}
+          run-id: '39417919101'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-memory-entry-${{ github.run_id }}
+          path: dist/chiron-entry
+      - name: Add the existing RAM driver rebuilt against its pinned source
+        run: cp dist/chiron-entry/ChironRamdisk.efi dist/efi/
+      - name: Install original-platform compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential uuid-dev iasl nasm gcc-aarch64-linux-gnu abootimg python3-distutils python3-pil python3-git gettext libfreetype6-dev
+      - name: Build firmware with low early heap and PEI-owned high bank
+        run: bash ci/hackios/build-memory-firmware.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: chiron-memory-firmware-${{ github.run_id }}
+          path: dist/chiron-memory-firmware/
+          retention-days: 7
+  image:
+    needs: [entry, firmware]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
       PYTHONDONTWRITEBYTECODE: '1'
@@ -28,50 +90,50 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Install only the EFI and image tools
+      - name: Install loader and FAT tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential uuid-dev nasm clang lld llvm mtools dosfstools
-      - name: Build the MIX2 EFI entry with persistent visible failure status
-        run: bash ci/hackios/build-chiron-entry.sh
-      - name: Reuse the physical-qualified zero-tail firmware container
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+          sudo apt-get install -y clang lld llvm mtools dosfstools
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-memory-entry-${{ github.run_id }}
+          path: dist/chiron-entry
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-memory-firmware-${{ github.run_id }}
+          path: dist/chiron-memory-firmware
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: chiron-source-trace-39770335838-1
           path: dist/chiron-boot-template
           github-token: ${{ github.token }}
           run-id: '39770335838'
-      - name: Wait for the constrained desktop runtime evidence
+      - name: Reuse the constrained source kernel and system-volume manifest
         run: |
-          PORT_RUN=39922183783
-          test -n "$PORT_RUN"
-          for n in $(seq 1 120); do
-            state=$(gh run view "$PORT_RUN" --repo "$GITHUB_REPOSITORY" --json status --jq .status)
-            if [ "$state" = completed ]; then break; fi
-            sleep 20
-          done
-          gh run download "$PORT_RUN" --repo "$GITHUB_REPOSITORY" \
-            --name "chiron-hackios-$PORT_RUN" --dir dist/chiron-runtime
-      - name: Build the phone loader with native Qualcomm USB
+          gh run download 39922183783 --repo "$GITHUB_REPOSITORY" \
+            --name chiron-hackios-39922183783 --dir dist/chiron-runtime
+      - name: Build loader that validates PEI memory ownership
         run: |
           python3 ci/hackios/phone_loader.py --work "$RUNNER_TEMP/chiron-phone-loader" \
             --phone dist/chiron-runtime/phone
-      - name: Replace the read-only FAT payload and verify the unchanged firmware
+      - name: Retain the qualified transport shim and source-build the firmware body
         run: |
           python3 ci/hackios/package-chiron.py \
             --template dist/chiron-boot-template/CT-39770335838-1-775f3f2e4009.img \
             --phone dist/chiron-runtime/phone \
             --entry dist/chiron-entry/ChironHackios.efi \
             --qualification dist/chiron-runtime/chiron-qualification.json \
+            --firmware dist/chiron-memory-firmware/chiron-unixnu.fd \
+            --memory-policy dist/chiron-memory-firmware/memory-policy.json \
             --output dist/chiron-hackios-image
           cp tools/start_chiron_hackios.py dist/chiron-hackios-image/
-      - name: Save the concrete MIX2 candidate and source evidence
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: MIX2-HackiOS-8796
+          name: MIX2-HackiOS-HK6
           path: |
             dist/chiron-hackios-image/
             dist/chiron-entry/
+            dist/chiron-memory-firmware/
           retention-days: 7
           compression-level: 1

@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+#ifndef CHIRON_MEMORY_WINDOW_H
+#define CHIRON_MEMORY_WINDOW_H
+
+#define CHIRON_MEMORY_WINDOW_GUID \
+  {0x71c9274c,0xc205,0x4557,{0x9c,0x34,0xf6,0x9b,0x1a,0x75,0xb4,0xc9}}
+#define CHIRON_MEMORY_WINDOW_MAGIC 0x434857494e444f57ULL
+#define CHIRON_MEMORY_WINDOW_BASE  0x100000000ULL
+#define CHIRON_MEMORY_WINDOW_BYTES 0xbc000000ULL
+
+typedef struct {
+  UINT64 Magic;
+  UINT64 Revision;
+  UINT64 Base;
+  UINT64 Bytes;
+  UINT64 Status;
+  UINT64 Stage;
+} CHIRON_MEMORY_WINDOW;
+
+#endif

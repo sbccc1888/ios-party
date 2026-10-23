@@ -8,6 +8,7 @@
 
 [Sources]
   ChironHackios.c
+  ChironMemoryWindow.h
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -19,6 +20,7 @@
   BaseMemoryLib
   DevicePathLib
   MemoryAllocationLib
+  HobLib
 
 [Protocols]
   gEfiSimpleFileSystemProtocolGuid

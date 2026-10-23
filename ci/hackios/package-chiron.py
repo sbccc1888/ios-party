@@ -2,6 +2,7 @@
 """Reuse the physical-qualified boot container; replace only its read-only FAT prefix."""
 
 import argparse
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -9,6 +10,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import zlib
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -29,13 +31,47 @@ def run(args):
     subprocess.run([str(v) for v in args], check=True)
 
 
-def package(template, phone, entry, qualification, output):
+def rebuild_transport_kernel(encoded, firmware, policy):
+    provenance = json.loads(policy.read_text())
+    rebuilt = firmware.read_bytes()
+    if (provenance.get("schema") != "chiron-owned-memory-window-v1"
+            or provenance.get("kernel_window_base") != "0x100000000"
+            or provenance.get("kernel_window_bytes") != "0xbc000000"
+            or provenance.get("early_uefi_heap_base") != "0xde000000"
+            or provenance.get("firmware_sha256") != sha(rebuilt)):
+        raise ValueError("rebuilt firmware memory policy or digest differs")
+    decoder = zlib.decompressobj(31)
+    frozen = decoder.decompress(encoded, 0x600001)
+    if not decoder.eof or len(frozen) != 0x600000 or len(rebuilt) != len(frozen):
+        raise ValueError("unexpected firmware Image size")
+    if (rebuilt[:8] != bytes.fromhex("01000010 ff1f0014")
+            or rebuilt[8:64] != frozen[8:64]
+            or rebuilt[64:0x8000] != b"\xff" * (0x8000 - 64)):
+        raise ValueError("rebuilt firmware moved the source-assembled transport entry")
+    # Preserve the qualified zero-tail shim and its guarded 24 MiB handoff.
+    effective = frozen[:0x8000] + rebuilt[0x8000:]
+    return gzip.compress(effective, mtime=0) + decoder.unused_data, {
+        "policy": provenance,
+        "compiled_fd_sha256": sha(rebuilt),
+        "effective_fd_sha256": sha(effective),
+        "frozen_transport_prefix_sha256": sha(frozen[:0x8000]),
+        "device_tree_bytes_preserved": True,
+        "hardware_qualified": False,
+    }
+
+
+def package(template, phone, entry, qualification, output, firmware=None, policy=None):
     proof = json.loads(qualification.read_text())
     if not proof.get("cortex_a53_no_pan_lse_desktop"):
         raise ValueError("the real constrained A53 desktop has not passed")
     original = template.read_bytes()
     if sha(original) != TEMPLATE_SHA:
         raise ValueError("boot template differs from the physical-qualified source-trace image")
+    if (firmware is None) != (policy is None):
+        raise ValueError("firmware and memory policy must be supplied together")
+    inputs = json.loads((phone / "inputs.json").read_text())
+    if inputs.get("memory_loader_source_sha256") and firmware is None:
+        raise ValueError("the preclaimed-window loader requires rebuilt memory-policy firmware")
     output.mkdir(parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory(prefix="chiron-hackios-package-") as temporary:
         work = Path(temporary)
@@ -57,7 +93,7 @@ default = "chiron-hackios"
 autoload = false
 [[entry]]
 id = "chiron-hackios"
-title = "HK5"
+title = "HK6"
 type = "efi"
 path = "/EFI/HackiOS/ChironHackios.efi"
 [[entry]]
@@ -85,29 +121,40 @@ action = "exit"
         header = bytearray(original[:report["header"]["page_size"]])
         ko = report["payload_offsets"]["kernel"]
         kernel = original[ko:ko + report["header"]["kernel_size"]]
+        rebuilt = None
+        if firmware is not None:
+            kernel, rebuilt = rebuild_transport_kernel(kernel, firmware, policy)
+            struct.pack_into("<I", header, 8, len(kernel))
         transported = volume[:PHYSICAL]
         check = hashlib.sha1()
         for payload in (kernel, transported, b""):
             check.update(payload)
             check.update(struct.pack("<I", len(payload)))
         header[576:608] = check.digest().ljust(32, b"\0")
-        result = bytearray(original)
-        result[:len(header)] = header
         ro = report["payload_offsets"]["ramdisk"]
-        result[ro:ro + PHYSICAL] = transported
+        if rebuilt is None:
+            result = bytearray(original)
+            result[:len(header)] = header
+            result[ro:ro + PHYSICAL] = transported
+        else:
+            page = report["header"]["page_size"]
+            result = (bytes(header) + kernel + bytes(-len(kernel) % page)
+                      + transported + original[ro + PHYSICAL:])
         image = output / "MIX2-HackiOS-8796-usb.img"
         image.write_bytes(result)
         inspect(image, output / "inspection")
         after = json.loads((output / "inspection/inspection.json").read_text())
-        if not after["legacy_sha1_matches"] or after["kernel_image_sha256"] != report["kernel_image_sha256"]:
-            raise ValueError("template firmware bytes changed")
+        expected_firmware = rebuilt["effective_fd_sha256"] if rebuilt else report["kernel_image_sha256"]
+        if not after["legacy_sha1_matches"] or after["kernel_image_sha256"] != expected_firmware:
+            raise ValueError("firmware or boot-container digest differs")
         manifest = {
             "image": image.name, "bytes": len(result), "sha256": sha(result),
-            "template_sha256": TEMPLATE_SHA, "firmware_bytes_unchanged": True,
+            "template_sha256": TEMPLATE_SHA, "firmware_bytes_unchanged": rebuilt is None,
+            "rebuilt_firmware": rebuilt,
             "kernel_binary_instruction_patching": False,
             "transport_readback_verified": True, "omitted_tail_zero": True,
             "physical_transport_bytes": PHYSICAL, "logical_transport_bytes": LOGICAL,
-            "qualification": proof, "phone_inputs": json.loads((phone / "inputs.json").read_text()),
+            "qualification": proof, "phone_inputs": inputs,
             "entry_sha256": sha(entry.read_bytes()),
             "phone_loader_sha256": sha((phone / "loader.efi").read_bytes()),
             "hardware_boot_qualified": False,
@@ -124,8 +171,11 @@ def main():
     ap.add_argument("--entry", type=Path, required=True)
     ap.add_argument("--qualification", type=Path, required=True)
     ap.add_argument("--output", type=Path, required=True)
+    ap.add_argument("--firmware", type=Path)
+    ap.add_argument("--memory-policy", type=Path)
     args = ap.parse_args()
-    print(package(args.template, args.phone, args.entry, args.qualification, args.output))
+    print(package(args.template, args.phone, args.entry, args.qualification, args.output,
+                  args.firmware, args.memory_policy))
 
 
 if __name__ == "__main__":

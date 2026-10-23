@@ -18,3 +18,4 @@ make -C "$EDK_TOOLS_PATH/Source/C" -j2
 export CONF_PATH="$WORKSPACE/Conf"
 build -p ChironCiPkg/ChironHackios.dsc -a AARCH64 -b DEBUG -t CLANGPDB -n 2
 cp "$WORKSPACE/Build/ChironHackios/DEBUG_CLANGPDB/AARCH64/ChironHackios.efi" "$ROOT/dist/chiron-entry/"
+cp "$WORKSPACE/Build/ChironHackios/DEBUG_CLANGPDB/AARCH64/ChironRamdisk.efi" "$ROOT/dist/chiron-entry/"

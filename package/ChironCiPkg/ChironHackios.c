@@ -8,13 +8,38 @@
 #include <Protocol/SimpleFileSystem.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiApplicationEntryPoint.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include "ChironMemoryWindow.h"
 
 #define PAYLOAD_BASE 0xF0000000ULL
 #define PAYLOAD_MAX  0x03F00000ULL
+
+STATIC EFI_STATUS
+PublishMemoryWindow(VOID)
+{
+  STATIC EFI_GUID Guid = CHIRON_MEMORY_WINDOW_GUID;
+  VOID *Hob;
+  CHIRON_MEMORY_WINDOW *Window;
+  EFI_HANDLE Handle = NULL;
+
+  Hob = GetFirstGuidHob(&Guid);
+  if (Hob == NULL || GET_GUID_HOB_DATA_SIZE(Hob) != sizeof(*Window)) {
+    Print(L"HK6: owned memory window HOB missing\n");
+    return EFI_NOT_FOUND;
+  }
+  Window = GET_GUID_HOB_DATA(Hob);
+  Print(L"HK6: owned window stage %u status %r base %lx bytes %lx\n",
+        (UINT32)Window->Stage, (EFI_STATUS)Window->Status, Window->Base, Window->Bytes);
+  if (Window->Magic != CHIRON_MEMORY_WINDOW_MAGIC || Window->Revision != 1 ||
+      Window->Base != CHIRON_MEMORY_WINDOW_BASE ||
+      Window->Bytes != CHIRON_MEMORY_WINDOW_BYTES || Window->Status != EFI_SUCCESS)
+    return EFI_UNSUPPORTED;
+  return gBS->InstallProtocolInterface(&Handle, &Guid, EFI_NATIVE_INTERFACE, Window);
+}
 
 STATIC EFI_GUID mQcomUsbGuid =
   {0xd9d9ce48,0x44b8,0x4f49,{0x8e,0x3e,0x2a,0x3b,0x92,0x7d,0xc6,0xc1}};
@@ -114,7 +139,7 @@ LoadFirmwareDriver(EFI_HANDLE Parent, EFI_GUID *FileGuid,
   EFI_DEVICE_PATH_PROTOCOL *Base;
 
   Status = FindFirmwareImage(FileGuid, Image);
-  Print(L"HK5: resident %s: %r\n", Name, Status);
+  Print(L"HK6: resident %s: %r\n", Name, Status);
   if (!EFI_ERROR(Status)) return EFI_SUCCESS;
   if (Status != EFI_NOT_FOUND) return Status;
 
@@ -135,13 +160,13 @@ LoadFirmwareDriver(EFI_HANDLE Parent, EFI_GUID *FileGuid,
     EfiInitializeFwVolDevicepathNode(&Node, FileGuid);
     Path = AppendDevicePathNode(Base, (EFI_DEVICE_PATH_PROTOCOL *)&Node);
     if (Path == NULL) { Status = EFI_OUT_OF_RESOURCES; break; }
-    Print(L"HK5: loading %s from firmware\n", Name);
+    Print(L"HK6: loading %s from firmware\n", Name);
     Status = gBS->LoadImage(FALSE, Parent, Path, NULL, 0, Image);
     FreePool(Path);
-    Print(L"HK5: load %s: %r\n", Name, Status);
+    Print(L"HK6: load %s: %r\n", Name, Status);
     if (EFI_ERROR(Status)) break;
     Status = gBS->StartImage(*Image, NULL, NULL);
-    Print(L"HK5: start %s: %r\n", Name, Status);
+    Print(L"HK6: start %s: %r\n", Name, Status);
     break;
   }
   FreePool(Handles);
@@ -173,33 +198,33 @@ CreatePeripheralController(QCOM_USB_INIT *Init,
       (UINTN)Original->Methods[0] != Base + 0x1440 ||
       (UINTN)Original->Methods[1] != Base + 0x1514 ||
       (UINTN)Original->Methods[4] != Base + 0x1750) {
-    Print(L"HK5: USB Config API differs from the pinned MSM8998 driver\n");
+    Print(L"HK6: USB Config API differs from the pinned MSM8998 driver\n");
     return EFI_UNSUPPORTED;
   }
-  Print(L"HK5: pinned USB Config public API verified\n");
+  Print(L"HK6: pinned USB Config public API verified\n");
   Config = AllocateCopyPool(sizeof(*Config), Original);
   if (Config == NULL) return EFI_OUT_OF_RESOURCES;
   Config->CoreNum = CoreNum;
   Config->ModeType = 0x04;
   Status = Init->StopController(Init, CoreNum, 0x01);
-  Print(L"HK5: stop host controller: %r\n", Status);
+  Print(L"HK6: stop host controller: %r\n", Status);
   if (EFI_ERROR(Status)) { FreePool(Config); return Status; }
 
   // Keep the copied public table resident; every callback belongs to vendor DXE.
   Status = gBS->InstallProtocolInterface(&Controller, &mUsbConfigGuid,
                                         EFI_NATIVE_INTERFACE, Config);
-  Print(L"HK5: create dedicated peripheral USB Config: %r\n", Status);
+  Print(L"HK6: create dedicated peripheral USB Config: %r\n", Status);
   if (EFI_ERROR(Status)) { FreePool(Config); return Status; }
   Status = Binding->Supported(Binding, Controller, NULL);
-  Print(L"HK5: DWC3 Supported dedicated controller: %r\n", Status);
+  Print(L"HK6: DWC3 Supported dedicated controller: %r\n", Status);
   if (EFI_ERROR(Status)) return Status;
   Drivers[0] = Binding->ImageHandle;
   Drivers[1] = NULL;
   Status = gBS->ConnectController(Controller, Drivers, NULL, FALSE);
-  Print(L"HK5: connect dedicated DWC3 controller: %r\n", Status);
+  Print(L"HK6: connect dedicated DWC3 controller: %r\n", Status);
   if (EFI_ERROR(Status)) return Status;
   Status = gBS->HandleProtocol(Controller, &mUsbfnGuid, &Usbfn);
-  Print(L"HK5: dedicated controller USB Function IO: %r\n", Status);
+  Print(L"HK6: dedicated controller USB Function IO: %r\n", Status);
   return Status;
 }
 
@@ -222,14 +247,14 @@ ConnectUsbFunction(QCOM_USB_INIT *Init, EFI_DRIVER_BINDING_PROTOCOL *Binding,
 
   Status = gBS->LocateHandleBuffer(ByProtocol, &mUsbConfigGuid,
                                   NULL, &Count, &Handles);
-  Print(L"HK5: enumerate USB Config controllers: %r\n", Status);
+  Print(L"HK6: enumerate USB Config controllers: %r\n", Status);
   if (EFI_ERROR(Status)) return Status;
   Drivers[0] = Binding->ImageHandle;
   Drivers[1] = NULL;
   for (Index = 0; Index < Count; Index++) {
     Status = gBS->HandleProtocol(Handles[Index], &mUsbConfigGuid, (VOID **)&Config);
     if (EFI_ERROR(Status)) continue;
-    Print(L"HK5: USB cfg %u revision %x core %u mode %x\n",
+    Print(L"HK6: USB cfg %u revision %x core %u mode %x\n",
           (UINT32)Index, Config->Revision, Config->CoreNum, Config->ModeType);
     if (Config->Revision == 0x10003 && Config->CoreNum == CoreNum &&
         Config->ModeType == 0x01) HostConfig = Config;
@@ -239,12 +264,12 @@ ConnectUsbFunction(QCOM_USB_INIT *Init, EFI_DRIVER_BINDING_PROTOCOL *Binding,
     Status = gBS->HandleProtocol(Handles[Index], &mUsbfnGuid, &Usbfn);
     if (!EFI_ERROR(Status)) { FreePool(Handles); return EFI_SUCCESS; }
     Status = Binding->Supported(Binding, Handles[Index], NULL);
-    Print(L"HK5: DWC3 Supported controller %u: %r\n", (UINT32)Index, Status);
+    Print(L"HK6: DWC3 Supported controller %u: %r\n", (UINT32)Index, Status);
     if (!EFI_ERROR(Status)) {
       Status = gBS->ConnectController(Handles[Index], Drivers, NULL, FALSE);
-      Print(L"HK5: connect DWC3 controller %u: %r\n", (UINT32)Index, Status);
+      Print(L"HK6: connect DWC3 controller %u: %r\n", (UINT32)Index, Status);
       Status = gBS->HandleProtocol(Handles[Index], &mUsbfnGuid, &Usbfn);
-      Print(L"HK5: controller %u USB Function IO: %r\n", (UINT32)Index, Status);
+      Print(L"HK6: controller %u USB Function IO: %r\n", (UINT32)Index, Status);
       if (!EFI_ERROR(Status)) { FreePool(Handles); return EFI_SUCCESS; }
     }
     Status = gBS->OpenProtocolInformation(Handles[Index], &mUsbConfigGuid,
@@ -252,7 +277,7 @@ ConnectUsbFunction(QCOM_USB_INIT *Init, EFI_DRIVER_BINDING_PROTOCOL *Binding,
     if (EFI_ERROR(Status)) continue;
     for (Owner = 0; Owner < OwnerCount; Owner++) {
       if ((Owners[Owner].Attributes & EFI_OPEN_PROTOCOL_BY_DRIVER) == 0) continue;
-      Print(L"HK5: controller %u owner %p flags %x count %u DWC3=%u\n",
+      Print(L"HK6: controller %u owner %p flags %x count %u DWC3=%u\n",
             (UINT32)Index, Owners[Owner].AgentHandle, Owners[Owner].Attributes,
             Owners[Owner].OpenCount,
             (UINT32)(Owners[Owner].AgentHandle == Binding->DriverBindingHandle));
@@ -260,7 +285,7 @@ ConnectUsbFunction(QCOM_USB_INIT *Init, EFI_DRIVER_BINDING_PROTOCOL *Binding,
     FreePool(Owners);
   }
   FreePool(Handles);
-  Print(L"HK5: matching peripheral controllers: %u\n", (UINT32)Matches);
+  Print(L"HK6: matching peripheral controllers: %u\n", (UINT32)Matches);
   if (Matches == 0 && HostConfig != NULL)
     return CreatePeripheralController(Init, Binding, HostConfig, CoreNum);
   return EFI_NOT_FOUND;
@@ -278,16 +303,16 @@ PrepareUsbFunction(EFI_HANDLE Parent)
   EFI_DRIVER_BINDING_PROTOCOL *Binding;
 
   Status = gBS->LocateProtocol(&mUsbfnGuid, NULL, &Usbfn);
-  Print(L"HK5: USB Function IO before init: %r\n", Status);
+  Print(L"HK6: USB Function IO before init: %r\n", Status);
   if (!EFI_ERROR(Status)) return EFI_SUCCESS;
   if (Status != EFI_NOT_FOUND) return Status;
   Status = gBS->LocateProtocol(&mUsbInitGuid, NULL, (VOID **)&Init);
-  Print(L"HK5: USB Init protocol: %r\n", Status);
+  Print(L"HK6: USB Init protocol: %r\n", Status);
   if (Status == EFI_NOT_FOUND) {
     Status = LoadFirmwareDriver(Parent, &mUsbInitFileGuid, L"UsbInitDxe", &Image);
     if (EFI_ERROR(Status)) return Status;
     Status = gBS->LocateProtocol(&mUsbInitGuid, NULL, (VOID **)&Init);
-    Print(L"HK5: USB Init after load: %r\n", Status);
+    Print(L"HK6: USB Init after load: %r\n", Status);
   }
   if (EFI_ERROR(Status)) return Status;
   if (Init->Revision < 0x10000 || Init->QueryCoreInfo == NULL ||
@@ -296,21 +321,21 @@ PrepareUsbFunction(EFI_HANDLE Parent)
   Status = LoadFirmwareDriver(Parent, &mDwc3FileGuid, L"UsbfnDwc3Dxe", &Image);
   if (EFI_ERROR(Status)) return Status;
   Status = gBS->HandleProtocol(Image, &gEfiDriverBindingProtocolGuid, (VOID **)&Binding);
-  Print(L"HK5: DWC3 driver binding: %r\n", Status);
+  Print(L"HK6: DWC3 driver binding: %r\n", Status);
   if (EFI_ERROR(Status)) return Status;
   if (Binding->Supported == NULL || Binding->ImageHandle == NULL) return EFI_UNSUPPORTED;
 
   ZeroMem(&Core, sizeof(Core));
   Status = Init->QueryCoreInfo(Init, NULL, &Core);
-  Print(L"HK5: query default USB core: %r\n", Status);
+  Print(L"HK6: query default USB core: %r\n", Status);
   if (EFI_ERROR(Status)) return Status;
-  Print(L"HK5: USB core %u supported modes %x\n", (UINT32)Core.CoreNum, Core.ModeType);
+  Print(L"HK6: USB core %u supported modes %x\n", (UINT32)Core.CoreNum, Core.ModeType);
   if ((Core.ModeType & (0x02 | 0x04)) == 0) return EFI_UNSUPPORTED;
   // The vendor API creates its peripheral handle and connects its driver stack.
   StartStatus = Init->StartController(Init, Core.CoreNum, 0x02);
-  Print(L"HK5: start peripheral controller: %r\n", StartStatus);
+  Print(L"HK6: start peripheral controller: %r\n", StartStatus);
   Status = gBS->LocateProtocol(&mUsbfnGuid, NULL, &Usbfn);
-  Print(L"HK5: USB Function IO after init: %r\n", Status);
+  Print(L"HK6: USB Function IO after init: %r\n", Status);
   if (EFI_ERROR(StartStatus)) return StartStatus;
   if (Status == EFI_NOT_FOUND) return ConnectUsbFunction(Init, Binding, Core.CoreNum);
   return Status;
@@ -324,12 +349,12 @@ PrepareUsb(EFI_HANDLE Parent)
   VOID *Usb;
 
   Status = gBS->LocateProtocol(&mQcomUsbGuid, NULL, &Usb);
-  Print(L"HK5: Qualcomm USB protocol: %r\n", Status);
+  Print(L"HK6: Qualcomm USB protocol: %r\n", Status);
   if (Status == EFI_NOT_FOUND) {
     Status = LoadFirmwareDriver(Parent, &mUsbDeviceFileGuid, L"UsbDeviceDxe", &Image);
     if (EFI_ERROR(Status)) return Status;
     Status = gBS->LocateProtocol(&mQcomUsbGuid, NULL, &Usb);
-    Print(L"HK5: Qualcomm USB after load: %r\n", Status);
+    Print(L"HK6: Qualcomm USB after load: %r\n", Status);
   }
   if (EFI_ERROR(Status)) return Status;
   return PrepareUsbFunction(Parent);
@@ -340,7 +365,7 @@ ShowFailure(CONST CHAR16 *Stage, EFI_STATUS Status)
 {
   EFI_INPUT_KEY Key;
   UINTN Index;
-  Print(L"\nHK5 FAIL %s\n%r  [%016lx]\n", Stage, Status, (UINT64)Status);
+  Print(L"\nHK6 FAIL %s\n%r  [%016lx]\n", Stage, Status, (UINT64)Status);
   Print(L"Take a photo of this screen. Press a key to return.\n");
   if (gST->ConIn != NULL && gST->ConIn->WaitForKey != NULL) {
     while (gST->ConIn->ReadKeyStroke(gST->ConIn, &Key) == EFI_SUCCESS) { }
@@ -365,7 +390,7 @@ ReadPayload(EFI_FILE_PROTOCOL *Root)
 
   Status = Root->Open(Root, &File, L"\\EFI\\HackiOS\\payload.bin", EFI_FILE_MODE_READ, 0);
   if (EFI_ERROR(Status)) return Status;
-  Print(L"HK5: payload file found\n");
+  Print(L"HK6: payload file found\n");
   Status = File->GetInfo(File, &gEfiFileInfoGuid, &InfoSize, NULL);
   if (Status != EFI_BUFFER_TOO_SMALL || InfoSize > 4096) {
     Status = EFI_COMPROMISED_DATA;
@@ -382,7 +407,7 @@ ReadPayload(EFI_FILE_PROTOCOL *Root)
   Status = gBS->AllocatePages(AllocateAddress, EfiLoaderData,
                              EFI_SIZE_TO_PAGES(0x04000000), &Address);
   if (EFI_ERROR(Status)) {
-    Print(L"HK5: reserve 64 MiB at %lx failed: %r\n", Address, Status);
+    Print(L"HK6: reserve 64 MiB at %lx failed: %r\n", Address, Status);
     goto Done;
   }
   Bytes = (UINTN)Info->FileSize;
@@ -410,11 +435,11 @@ StartLoader(EFI_HANDLE Parent, EFI_HANDLE Volume)
 
   Path = FileDevicePath(Volume, L"\\EFI\\HackiOS\\loader.efi");
   if (Path == NULL) return ShowFailure(L"LOADER PATH", EFI_OUT_OF_RESOURCES);
-  Print(L"HK5: loading loader from RAM filesystem\n");
+  Print(L"HK6: loading loader from RAM filesystem\n");
   Status = gBS->LoadImage(FALSE, Parent, Path, NULL, 0, &Image);
   FreePool(Path);
   if (EFI_ERROR(Status)) return ShowFailure(L"LOAD LOADER", Status);
-  Print(L"HK5: starting native Qualcomm USB loader; UEFI remains resident\n");
+  Print(L"HK6: starting native Qualcomm USB loader; UEFI remains resident\n");
   Status = gBS->StartImage(Image, NULL, NULL);
   return ShowFailure(L"START LOADER", Status);
 }
@@ -428,7 +453,9 @@ UefiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
   UINTN Index;
 
   (VOID)SystemTable;
-  Print(L"\nHK5 EFI ENTRY: chiron / 8796 / 20F66\n");
+  Print(L"\nHK6 EFI ENTRY: chiron / 8796 / 20F66\n");
+  Status = PublishMemoryWindow();
+  if (EFI_ERROR(Status)) return ShowFailure(L"OWNED MEMORY WINDOW", Status);
   Status = PrepareUsb(ImageHandle);
   if (EFI_ERROR(Status)) return ShowFailure(L"PREPARE QUALCOMM USB", Status);
   Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiSimpleFileSystemProtocolGuid,

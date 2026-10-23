@@ -8,6 +8,7 @@ import shutil
 
 import apply_chiron
 import apply_chiron_usb
+import apply_chiron_memory
 import cloud
 
 
@@ -24,6 +25,7 @@ def main():
     profile = json.loads(Path(__file__).with_name("chiron-profile.json").read_text())
     apply_chiron.loader_overlay(args.work, profile)
     apply_chiron_usb.apply(args.work)
+    apply_chiron_memory.apply(args.work)
     cloud.command(["bash", "xnuloader/build.sh"], cwd=args.work)
     shutil.copy2(args.work / "xnuloader/loader.efi", args.phone / "loader.efi")
     inputs = json.loads((args.phone / "inputs.json").read_text())
@@ -31,6 +33,9 @@ def main():
     inputs["usb_backend"] = "native Qualcomm USB with checked USB Init peripheral startup"
     inputs["usb_transport_hardware_qualified"] = False
     inputs["phone_loader_source_sha256"] = cloud.digest(args.work / "xnuloader/loader.c")["sha256"]
+    inputs["memory_loader_source_sha256"] = cloud.digest(
+        args.work / "xnuloader/chiron_memory_window.inc")["sha256"]
+    inputs["memory_policy"] = "PEI-owned high bank, protocol and memory-map verified"
     cloud.save(args.phone / "inputs.json", inputs)
 
 
