@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
@@ -48,8 +48,7 @@ jobs:
           run-id: '39770335838'
       - name: Wait for the constrained desktop runtime evidence
         run: |
-          PORT_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&event=push" \
-            --jq '.workflow_runs[]|select(.name=="MIX2 HackiOS port" or .name=="MIX2 HackiOS recheck" or .name=="MIX2 HackiOS qualify")|.id' | head -1)
+          PORT_RUN=39922183783
           test -n "$PORT_RUN"
           for n in $(seq 1 120); do
             state=$(gh run view "$PORT_RUN" --repo "$GITHUB_REPOSITORY" --json status --jq .status)
