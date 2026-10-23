@@ -8,6 +8,7 @@ on:
       - 'ci/hackios/phone_loader.py'
       - 'ci/hackios/apply_chiron_memory.py'
       - 'ci/hackios/memory_loader.inc'
+      - 'tests/test_chiron_memory_window.py'
   workflow_dispatch:
 permissions:
   contents: read

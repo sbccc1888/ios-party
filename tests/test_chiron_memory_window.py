@@ -237,7 +237,7 @@ static efi_status release(uint64_t address,uint64_t pages) {
  frees++; return 0;
 }
 int main(void) {
- boot_services services={locate,map,allocate,release}; BS=&services;
+ static boot_services services={locate,map,allocate,release}; BS=&services;
  struct payload_info payload={0};
  for (scenario=0;scenario<=10;scenario++) {
   maps=allocations=frees=0; win_base=win_size=returned_address=0;
