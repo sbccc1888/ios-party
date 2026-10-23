@@ -39,7 +39,7 @@ jobs:
           sudo apt-get -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update
           sudo apt-get -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends \
             build-essential clang lld llvm flex bison m4 perl autoconf automake \
-            curl xz-utils libxml2-dev libssl-dev zlib1g-dev pkg-config libtinfo6 \
+            curl xz-utils uuid-dev libxml2-dev libssl-dev zlib1g-dev pkg-config libtinfo6 \
             7zip qemu-system-arm qemu-efi-aarch64 python3-pil
           if ! command -v 7z >/dev/null; then
             sudo ln -s "$(command -v 7zz)" /usr/local/bin/7z
