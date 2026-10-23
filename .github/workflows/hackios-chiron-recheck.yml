@@ -1,0 +1,50 @@
+name: MIX2 HackiOS recheck
+
+on:
+  push:
+    branches: ['codex/hackios-chiron']
+    paths:
+      - '.github/workflows/hackios-chiron-recheck.yml'
+      - 'ci/hackios/recheck_chiron.py'
+      - 'ci/hackios/observe_chiron.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  desktop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-system-arm qemu-efi-aarch64 ipxe-qemu python3-pil
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-hackios-build-39915264473
+          path: dist/chiron-compiled
+          github-token: ${{ github.token }}
+          run-id: '39915264473'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-ios165-system
+          path: dist/chiron-system
+          github-token: ${{ github.token }}
+          run-id: '39915264473'
+      - name: Replay the exact compiled native closure
+        run: |
+          python3 ci/hackios/recheck_chiron.py --runtime dist/chiron-compiled \
+            --system dist/chiron-system/system.apfs \
+            --work "$GITHUB_WORKSPACE/.cache/chiron-recheck" --evidence dist/chiron-recheck
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: chiron-hackios-${{ github.run_id }}
+          path: dist/chiron-recheck/
+          retention-days: 7
+          compression-level: 1

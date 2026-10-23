@@ -49,7 +49,7 @@ jobs:
       - name: Wait for the constrained desktop runtime evidence
         run: |
           PORT_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&event=push" \
-            --jq '.workflow_runs[]|select(.name=="MIX2 HackiOS port")|.id' | head -1)
+            --jq '.workflow_runs[]|select(.name=="MIX2 HackiOS port" or .name=="MIX2 HackiOS recheck")|.id' | head -1)
           test -n "$PORT_RUN"
           for n in $(seq 1 120); do
             state=$(gh run view "$PORT_RUN" --repo "$GITHUB_REPOSITORY" --json status --jq .status)
