@@ -1,0 +1,18 @@
+{
+  "image_sha256": "24193a719c9cb1e9e322fa419816d65f2d1ed8dc25b588d3818705ce1aaeb477",
+  "cloud_run_id": "39937869418",
+  "cloud_project_sha": "2ef68f2e39270cf02f3028434914857ebca1c559",
+  "legacy_sha1_valid": true,
+  "firmware_bytes_match_hk2": true,
+  "trailing_bytes_match_hk2": true,
+  "payload_bytes_match_hk2": true,
+  "entry_readback_verified": true,
+  "usb_init_and_usbfn_guids_in_entry": true,
+  "native_usb_loader_readback_verified": true,
+  "loader_source_reproduced": true,
+  "chiron_duplicate_init_event_skipped": true,
+  "system_root_manifest_matches_hk2": true,
+  "hardware_observed": false,
+  "hardware_boot_qualified": false,
+  "tests": "48 existing HackiOS tool tests passed"
+}

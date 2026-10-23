@@ -107,3 +107,82 @@ HK2 首轮提交：`d69c579069275f2985c93d9139546ec9499b9f55`。
 手机的下一项验收是出现 `usb: started`，并由主机只读确认
 `getvar product = xnuloader`、`getvar board = chiron`。
 仅此两项不能证明 XNU 或 SpringBoard 已运行。
+
+## HK2 实机结果与 HK3
+
+用户照片 `IMG_20261023_180213.jpg` 确认：
+
+```text
+HK2: Qualcomm USB protocol: Success
+usb: Qualcomm protocol revision 10000001
+usb: start failed 800000000000000e
+USB transport unavailable; kernel not started
+```
+
+上层 Qualcomm 协议存在，但 StartEx 返回 `EFI_NOT_FOUND`。
+这推翻了“只找到上层协议即可开始枚举”的假设；仍未执行 XNU。
+仅凭该状态不能区分底层 USB Function IO 查找失败和后续控制器操作失败。
+
+对照 Qualcomm 参考源码镜像 `Rivko/android-firmware-qti-sdm670`
+固定提交 `20bb8ae36c93fc16bbadda0e0a83f930c0c8a271`：
+
+- `boot_images/QcomPkg/Drivers/UsbDeviceDxe/UsbDeviceDxe.c`：
+  入口直接发布上层协议；StartEx 才调用 UsbDeviceOpenProtocols 查找
+  USB Function IO，之后依次 StopController、StartController 和配置端点。
+- `boot_images/QcomPkg/Drivers/UsbConfigDxe/UsbConfig.c`：
+  初始化事件通过无返回值回调启动外设控制器，调用者不能取得内部失败状态。
+- `boot_images/QcomPkg/Include/Protocol/EFIUsbInitProtocol.h`：
+  提供带状态返回的 QueryCoreInfo 和 StartController；
+  QueryCoreInfo 的 CoreNum 为 NULL 时查询默认 USB 端口。
+- `boot_images/QcomPkg/Drivers/UsbInitDxe/UsbInitDxe.c`：
+  USB Init 转调 USB Config，负责模式枚举转换。
+- `boot_images/QcomPkg/SDM670Pkg/Library/UsbConfigLib/UsbConfigLib.c`：
+  参考实现创建外设控制器句柄后调用 ConnectController。
+- `boot_images/QcomPkg/Drivers/UsbfnDwc3Dxe/UsbfnDwc3.c`：
+  DWC3 入口发布 Driver Binding，绑定控制器后才发布 USB Function IO。
+
+这些文件是参考实现，并非声称已反编译并逐指令认证 MIX2 厂商二进制。
+本地 MSM8998 固定厂商 UsbInitDxe.efi 在偏移 20576 可找到 USB Init
+协议 GUID `2da15ac7-4909-4c4c-b8c3-a742195ea46e`，
+UsbDeviceDxe 与 UsbfnDwc3Dxe 中均能找到标准 USB Function IO GUID
+`32d2963a-fe5d-4f30-b633-6e5dc55803cc`。GUID 静态出现不等于实机已安装协议。
+
+HK3 的改动：
+
+- 分别检查 Qualcomm USB Device 和底层 USB Function IO。
+- 底层已存在时复用现有控制器，不重复初始化。
+- 底层缺失时取得 USB Init，并核对固定 DWC3 驱动的 Driver Binding；
+  若厂商驱动尚未加载，只从原固件卷按固定文件 GUID 加载。
+- 通过 Loaded Image 的固件文件路径识别已加载模块，避免重复加载同一驱动。
+- 查询默认端口及支持模式，显式调用 StartController 的 peripheral 模式；
+  显示返回状态，并再次检查 USB Function IO，失败时停在入口。
+- chiron loader 跳过旧初始化事件，防止显式启动后再次重入；
+  原生 StartEx、DMA 缓冲区、轮询收发、载荷和内核保持原有逻辑。
+
+固定上游源码应用检查通过；原生 usb_wait、usb_rx、usb_tx 字节保持一致，
+loader 身份、系统卷容量检查保留；现有 48 项 HackiOS 工具测试全部通过。
+HK3 云端运行 `39937869418` 全部通过，源码提交
+`2ef68f2e39270cf02f3028434914857ebca1c559`。
+本轮只编译 EFI 入口及 loader 并重新打包，未重新编译内核或生成系统卷；
+本地交付复核通过，仍须手机运行验证。
+
+| HK3 对象 | 字节数 / SHA-256 |
+| --- | --- |
+| 启动镜像 | 26,697,728 / `24193a719c9cb1e9e322fa419816d65f2d1ed8dc25b588d3818705ce1aaeb477` |
+| EFI 入口 | 15,360 / `41ba81b50a54782bd3135dbbbac2c9b1617082ded74415e71cc2bdd45bb934a3` |
+| 原生 USB loader | 69,632 / `da23c4afc123858996562ed84291bcb2aa0abcaa20ed34aed7aa09fbad5ecec0` |
+| loader 源码 | `43f524f0f450d3eac5798cc3fcb11f7151419f8fa83a069a56e8e1f03a204704` |
+
+本机重新核对容器 SHA-256 和 legacy SHA-1，逐字节比较 HK2/HK3 的
+固件、末尾 DTB 和 HackiOS 载荷；重新读取 RAM FAT 中的新入口、
+loader、payload 和 HK3 标题。入口包含 USB Init 和 USB Function IO GUID。
+从固定上游源码重放全部 loader 补丁，得到与云端完全一致的源码哈希。
+HK3 系统卷清单与 HK2 一致，本轮未重复计算大卷哈希；
+实际上传工具仍会检查系统卷完整哈希。
+
+交付文件为 `dist/mix2-hackios/MIX2-HackiOS-HK3.img`、
+`manifest-hk3.json`、`local-verification-hk3.json`、`START-HK3.zh-CN.md`。
+原始云产物位于 `dist/mix2-hackios-hk3-build/`，构建日志位于
+`out/chiron-port/package-hk3-39937869418.log`。
+精简复核记录为 `research/hackios-reuse/phone-usb-hk3-20261023.json`。
+本轮未执行手机启动、上传、刷写或重启；HK3 硬件资格保持 false。
