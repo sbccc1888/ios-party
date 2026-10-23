@@ -1,0 +1,18 @@
+{
+  "image_sha256": "1c1ececd1b5214d3a0098b942513a335a2b0cc632d2d418fd845629caeda5c5a",
+  "cloud_run_id": "39940010772",
+  "cloud_project_sha": "41cdd7cd4825d166050698bb165f40edf81a8059",
+  "legacy_sha1_valid": true,
+  "firmware_bytes_match_hk3": true,
+  "trailing_bytes_match_hk3": true,
+  "payload_bytes_match_hk3": true,
+  "loader_diff_only_coff_timestamp": true,
+  "loader_timestamp_normalized_sha256": "e7b378d1878c8a93bd00c3d584190a3c0708b900b1bb8fedf02c5cf3442c8a1f",
+  "loader_source_hash_matches_hk3": true,
+  "entry_readback_verified": true,
+  "usb_config_guid_and_directed_binding_diagnostic_in_entry": true,
+  "system_root_manifest_matches_hk3": true,
+  "offline_analysis_copies_used_in_package": false,
+  "hardware_observed": false,
+  "hardware_boot_qualified": false
+}

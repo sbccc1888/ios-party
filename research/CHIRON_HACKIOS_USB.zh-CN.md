@@ -186,3 +186,81 @@ HK3 系统卷清单与 HK2 一致，本轮未重复计算大卷哈希；
 `out/chiron-port/package-hk3-39937869418.log`。
 精简复核记录为 `research/hackios-reuse/phone-usb-hk3-20261023.json`。
 本轮未执行手机启动、上传、刷写或重启；HK3 硬件资格保持 false。
+
+## HK3 实机结果与 HK4
+
+用户照片 `IMG_20261023_182618.jpg` 确认：
+
+```text
+USB Function IO before init: Not Found
+USB Init protocol: Success
+resident UsbfnDwc3Dxe: Success
+DWC3 driver binding: Success
+query default USB core: Success
+USB core 0 supported modes 3
+start peripheral controller: Success
+USB Function IO after init: Not Found
+```
+
+入口停在 PREPARE QUALCOMM USB，载荷和 XNU 尚未执行。
+现在可以排除上层协议缺失、USB Init 缺失、DWC3 驱动未加载等情况，
+但仍不能把 StartController 返回成功当成底层驱动已绑定。
+
+本轮用普通 LLVM 工具检查固定 MSM8998 厂商二进制，未运行 REA：
+
+| 二进制 | 原始 SHA-256 |
+| --- | --- |
+| UsbConfigDxe.efi | `c81450d139adbb7bc1744a2dc21388e35dac7876913224d04b1c298c4f386d6f` |
+| UsbfnDwc3Dxe.efi | `c54d0ea4b67bccfe2508549bd54e3197f1d2918b0376f0ea059fbb9ce3929f3e` |
+
+LLVM 首次读取时拒绝厂商 PE 的 185 字节 debug directory。
+`research/hackios-reuse/prepare_pe_analysis.py` 只在新的离线分析副本中
+清零该目录的八字节引用；核对其余全部字节未变。
+分析副本始终位于 `out/chiron-port/usb-analysis/`，不作为启动或打包输入。
+
+UsbConfigDxe 协议表位于 RVA `0x11140`，StartController 包装入口为
+`0x1a04`，转调实现 `0x4a24`。实现的 `0x4b8c–0x4b9c`
+比较当前模式和目标模式；相等时返回成功，绕过后续
+`0x4c50` 的外设 ConnectController 调用。
+这证实了“重复启动成功但未重试连接”的静态路径，
+不等于已观察到手机本次一定走了该分支。
+
+DWC3 的 Driver Binding 表位于 `0x1c140`，Supported 为 `0x1548`。
+实际指令读取 USB Config 的 CoreNum/ModeType 偏移 `0x88/0x8c`，
+并要求目标为 SS device 模式 `4`。HK4 对这两个布局偏移增加编译期检查。
+原始哈希、分析副本哈希、代码位置和观察边界保存在
+`research/hackios-reuse/usb-binding-static-20261023.json`。
+
+HK4 在 StartController 返回成功而 USB Function IO 仍缺失时：
+
+- 枚举实际 USB Config 控制器，显示 revision、core 和当前模式。
+- 仅对默认 core 的 SS peripheral 控制器调用已加载 DWC3 的 Supported。
+- 支持时通过 UEFI ConnectController 优先连接该 DWC3 驱动，
+  关闭递归连接，并在同一控制器上检查 USB Function IO。
+- 失败时打印 Supported/ConnectController 状态及 BY_DRIVER 协议所有者，
+  不移除其他驱动或直接修改私有模式状态。
+
+HK4 源码提交为 `41cdd7cd4825d166050698bb165f40edf81a8059`。
+只修改 EFI 入口及菜单版本，沿用 HK3 loader、载荷、内核和系统卷。
+
+HK4 云端运行 `39940010772` 全部通过，本地独立复核通过：
+
+| HK4 对象 | 字节数 / SHA-256 |
+| --- | --- |
+| 启动镜像 | 26,697,728 / `1c1ececd1b5214d3a0098b942513a335a2b0cc632d2d418fd845629caeda5c5a` |
+| EFI 入口 | 16,384 / `f369d7e775d00094afc04b0995fe0c9e354a67c7dfedc9b61daf4b480f2dd5fa` |
+| 重新链接的 loader | 69,632 / `46b5c55254d29a2e301542a4f74bed803caa78a9948cfa72b2bb3197a7910c2f` |
+
+容器 SHA-256 和 legacy SHA-1、入口/loader/payload 的 FAT 读回通过。
+固件、末尾 DTB 和载荷与 HK3 逐字节一致，系统卷清单相同。
+loader 源码哈希与 HK3 相同；重新链接产生的二进制只在 COFF
+时间戳字段有差异，将两份时间戳在内存中清零后其余字节完全一致。
+这种归一化仅用于比较，没有修改交付的 loader。
+
+交付位于 `dist/mix2-hackios/`：
+`MIX2-HackiOS-HK4.img`、`manifest-hk4.json`、
+`local-verification-hk4.json`、`START-HK4.zh-CN.md`。
+原始包保留在 `dist/mix2-hackios-hk4-build/`，日志为
+`out/chiron-port/package-hk4-39940010772.log`。
+精简复核记录为 `research/hackios-reuse/phone-usb-hk4-20261023.json`。
+本轮未操作手机，HK4 的实际 USB 枚举、内核执行和桌面仍待实机验证。

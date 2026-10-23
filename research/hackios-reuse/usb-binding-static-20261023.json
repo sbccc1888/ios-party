@@ -1,0 +1,45 @@
+{
+  "UsbConfigDxe": {
+    "source": "/private/tmp/ios-party-research/edk2/Platforms/Msm8998Binaries/common/Binaries/UsbConfigDxe/UsbConfigDxe.efi",
+    "source_sha256": "c81450d139adbb7bc1744a2dc21388e35dac7876913224d04b1c298c4f386d6f",
+    "analysis_copy": "/Users/mac/Documents/ChatGPT/ios_party/out/chiron-port/usb-analysis/UsbConfigDxe.analysis.efi",
+    "analysis_sha256": "92bf8a22c0170a5f0fc47b7b9c16c9e0527a743ad436a872f66222a2930eb2e6",
+    "debug_directory_offset": 3856,
+    "original_debug_directory": "9c150100b9000000",
+    "scope": "offline disassembly only; never a boot or packaging input",
+    "only_debug_directory_reference_changed": true,
+    "text_and_data_unchanged": true
+  },
+  "UsbfnDwc3Dxe": {
+    "source": "/private/tmp/ios-party-research/edk2/Platforms/Msm8998Binaries/common/Binaries/UsbfnDwc3Dxe/UsbfnDwc3Dxe.efi",
+    "source_sha256": "c54d0ea4b67bccfe2508549bd54e3197f1d2918b0376f0ea059fbb9ce3929f3e",
+    "analysis_copy": "/Users/mac/Documents/ChatGPT/ios_party/out/chiron-port/usb-analysis/UsbfnDwc3Dxe.analysis.efi",
+    "analysis_sha256": "3789cf4367b3b0316ffc233e5db2a501a530904947781031779b87e6bd67c34e",
+    "debug_directory_offset": 3856,
+    "original_debug_directory": "70c40100b9000000",
+    "scope": "offline disassembly only; never a boot or packaging input",
+    "only_debug_directory_reference_changed": true,
+    "text_and_data_unchanged": true
+  },
+  "observations": {
+    "config_protocol_table_rva": "0x11140",
+    "config_start_wrapper_rva": "0x1a04",
+    "config_start_implementation_rva": "0x4a24",
+    "same_mode_success_branch": [
+      "0x4b8c: ldr w1, [x21, #0xb4]",
+      "0x4b90: cmp w1, w20",
+      "0x4b94: b.ne 0x4ba0",
+      "0x4b98: mov x19, xzr",
+      "0x4b9c: b 0x4de4"
+    ],
+    "peripheral_connect_call_rva": "0x4c50",
+    "dwc3_driver_binding_table_rva": "0x1c140",
+    "dwc3_supported_rva": "0x1548",
+    "dwc3_start_rva": "0x1634",
+    "usb_config_core_mode_offsets": [
+      "0x88",
+      "0x8c"
+    ],
+    "scope": "ordinary LLVM static disassembly; no REA Evidence and no runtime branch observation"
+  }
+}
