@@ -110,7 +110,8 @@ class TransportRebuildTests(unittest.TestCase):
             report = {"schema": "chiron-owned-memory-window-v1",
                       "kernel_window_base": "0x100000000",
                       "kernel_window_bytes": "0xbc000000",
-                      "early_uefi_heap_base": "0xde000000",
+                      "early_uefi_heap_base": "0xd8000000",
+                      "early_uefi_heap_bytes": "0x8000000",
                       "firmware_sha256": hashlib.sha256(rebuilt).hexdigest()}
             policy.write_text(json.dumps(report))
             dtb = b"preserved-dtb-sentinel"
@@ -127,6 +128,44 @@ class TransportRebuildTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "policy or digest"):
                 self.package.rebuild_transport_kernel(
                     gzip.compress(frozen) + dtb, firmware, policy)
+
+
+class EarlyHeapRegressionTests(unittest.TestCase):
+    def test_actual_128_mib_heap_is_accepted_and_wrong_32_mib_heap_is_rejected(self):
+        if not shutil.which("cc"):
+            self.skipTest("host C compiler unavailable")
+        source = (ROOT / "package/ChironCiPkg/ChironReserveWindow.inc").read_text()
+        helpers = source[source.index("STATIC BOOLEAN\nChironWindowDisjoint("):
+                         source.index("STATIC BOOLEAN\nChironWindowFdtReservationsSafe(")]
+        unit = """#include <stdint.h>
+#include <assert.h>
+typedef uint64_t UINT64;
+typedef int BOOLEAN;
+#define STATIC static
+#define FALSE 0
+#define MAX_UINT64 UINT64_MAX
+#include "ChironMemoryWindow.h"
+""" + helpers + """
+int main(void) {
+ assert(ChironWindowHeapSafe(0xd8000000ULL, 0x08000000ULL));
+ assert(!ChironWindowHeapSafe(0xde000000ULL, 0x02000000ULL));
+ assert(!ChironWindowHeapSafe(0x168000000ULL, 0x08000000ULL));
+ assert(!ChironWindowHeapSafe(0xd8000000ULL, 0));
+ assert(!ChironWindowDisjoint(0x100000000ULL, 0xbc000000ULL, 0x168000000ULL, 0x08000000ULL));
+ assert(!ChironWindowDisjoint(0x100000000ULL, 0xbc000000ULL, UINT64_MAX-3, 8));
+ return 0;
+}
+"""
+        with tempfile.TemporaryDirectory(prefix="chiron-heap-check-") as directory:
+            folder = Path(directory)
+            (folder / "heap.c").write_text(unit)
+            result = subprocess.run(
+                ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
+                 "-I", ROOT / "package/ChironCiPkg",
+                 folder / "heap.c", "-o", folder / "heap"],
+                capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            subprocess.run([folder / "heap"], check=True)
 
 
 if __name__ == "__main__":

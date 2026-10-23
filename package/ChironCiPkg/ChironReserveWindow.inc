@@ -12,6 +12,14 @@ ChironWindowDisjoint(UINT64 Base, UINT64 Bytes, UINT64 Other, UINT64 Length)
 }
 
 STATIC BOOLEAN
+ChironWindowHeapSafe(UINT64 HeapBase, UINT64 HeapBytes)
+{
+  return HeapBase == 0xd8000000ULL && HeapBytes == 0x08000000ULL &&
+         ChironWindowDisjoint(CHIRON_MEMORY_WINDOW_BASE, CHIRON_MEMORY_WINDOW_BYTES,
+                              HeapBase, HeapBytes);
+}
+
+STATIC BOOLEAN
 ChironWindowFdtReservationsSafe(CONST VOID *Blob, UINT64 Base, UINT64 Bytes)
 {
   INT32 Node;
@@ -73,9 +81,7 @@ ChironReserveKernelWindow(fdt *Parsed, UINT64 HeapBase, UINT64 HeapBytes)
   Window.Bytes = CHIRON_MEMORY_WINDOW_BYTES;
   Window.Status = EFI_UNSUPPORTED;
   Window.Stage = 1;
-  if (HeapBase != 0xde000000ULL || HeapBytes != 0x02000000ULL ||
-      !ChironWindowDisjoint(Window.Base, Window.Bytes, HeapBase, HeapBytes))
-    goto Done;
+  if (!ChironWindowHeapSafe(HeapBase, HeapBytes)) goto Done;
   Window.Stage = 2;
   Blob = (CONST VOID *)(UINTN)(*(EFI_PHYSICAL_ADDRESS *)(UINTN)
                              FixedPcdGet64(PcdDeviceTreeStore));

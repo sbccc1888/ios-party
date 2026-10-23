@@ -31,14 +31,15 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Install EFI compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential uuid-dev nasm clang lld llvm
-      - name: Build memory ownership entry and unchanged read-only RAM driver
+      - name: Check the corrected early heap and memory ownership
         run: python3 -B -m unittest discover -s tests -p 'test_chiron_*.py' -v
-      - name: Compile EFI entry and RAM driver
-        run: bash ci/hackios/build-chiron-entry.sh
+      - name: Reuse the unchanged compiled HK6 entry and RAM driver
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: chiron-memory-entry-39947141008
+          path: dist/chiron-entry
+          github-token: ${{ github.token }}
+          run-id: '39947141008'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: chiron-memory-entry-${{ github.run_id }}
@@ -112,10 +113,11 @@ jobs:
         run: |
           gh run download 39922183783 --repo "$GITHUB_REPOSITORY" \
             --name chiron-hackios-39922183783 --dir dist/chiron-runtime
-      - name: Build loader that validates PEI memory ownership
+      - name: Reuse the unchanged HK6 ownership-checking loader
         run: |
-          python3 ci/hackios/phone_loader.py --work "$RUNNER_TEMP/chiron-phone-loader" \
-            --phone dist/chiron-runtime/phone
+          gh run download 39947141008 --repo "$GITHUB_REPOSITORY" \
+            --name MIX2-HackiOS-HK6 --dir dist/hk6-reference
+          python3 -c 'import json,pathlib,sys,hashlib;sys.path.insert(0,"tools");from chiron_ram_fat import RamFat32;r=pathlib.Path("dist/hk6-reference/chiron-hackios-image");m=json.loads((r/"manifest.json").read_text());b=(r/"MIX2-HackiOS-8796-usb.img").read_bytes();assert hashlib.sha256(b).hexdigest()==m["sha256"];q=json.loads((r/"inspection/inspection.json").read_text());o=q["payload_offsets"]["ramdisk"];f=RamFat32(b[o:o+(24<<20)]+bytes(24<<20));loader=f.read("EFI/HackiOS/loader.efi");assert hashlib.sha256(loader).hexdigest()==m["phone_loader_sha256"];p=pathlib.Path("dist/chiron-runtime/phone");(p/"loader.efi").write_bytes(loader);(p/"inputs.json").write_text(json.dumps(m["phone_inputs"],indent=2)+"\n")'
       - name: Retain the qualified transport shim and source-build the firmware body
         run: |
           python3 ci/hackios/package-chiron.py \
@@ -130,7 +132,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: MIX2-HackiOS-HK6
+          name: MIX2-HackiOS-HK6b
           path: |
             dist/chiron-hackios-image/
             dist/chiron-entry/

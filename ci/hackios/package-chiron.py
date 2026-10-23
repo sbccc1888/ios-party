@@ -37,7 +37,8 @@ def rebuild_transport_kernel(encoded, firmware, policy):
     if (provenance.get("schema") != "chiron-owned-memory-window-v1"
             or provenance.get("kernel_window_base") != "0x100000000"
             or provenance.get("kernel_window_bytes") != "0xbc000000"
-            or provenance.get("early_uefi_heap_base") != "0xde000000"
+            or provenance.get("early_uefi_heap_base") != "0xd8000000"
+            or provenance.get("early_uefi_heap_bytes") != "0x8000000"
             or provenance.get("firmware_sha256") != sha(rebuilt)):
         raise ValueError("rebuilt firmware memory policy or digest differs")
     decoder = zlib.decompressobj(31)
@@ -93,7 +94,7 @@ default = "chiron-hackios"
 autoload = false
 [[entry]]
 id = "chiron-hackios"
-title = "HK6"
+title = "HK6b"
 type = "efi"
 path = "/EFI/HackiOS/ChironHackios.efi"
 [[entry]]
