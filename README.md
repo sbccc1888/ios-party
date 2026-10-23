@@ -1,5 +1,14 @@
 # ios-party
 
+小米 MIX 2（chiron / MSM8998）的实验性 XNU / iOS 移植源码。
+当前默认分支 `codex/hackios-chiron` 保存 HackiOS 8796 路线；
+`codex/chiron-source-trace` 保留此前 10063 基线。
+这是开发项目，尚不是可日用的 iOS ROM。
+
+本仓库不提供 Apple 原版系统文件；公开工作流不会上传 Apple 系统卷。
+原始贡献的许可为 [BSD-2-Clause-Patent](LICENSE)，上游源码和补丁保留各自许可，
+见 [第三方与发布范围说明](NOTICE.md)。
+
 基于 UniXNU 与 MSM8998 EDK2 的设备移植工程。目标设备为小米 MIX 2 6 GB / 128 GB，实测 SoC 修订 2.1、Synaptics 触控、JDI video 面板。
 
 2026-10-22，实机照片 `IMG_20261022_162407.jpg` 已显示构建 `CT-39745321134-1-783CC7E68F24` 和多轮 `CHIRON RAM init: PID 1, 4K ABI, heartbeat`，确认 MIX 2 上的最小 4 KiB XNU 与自有用户态 PID 1 已运行。尚未生成完整 iOS 用户态或可日常使用的系统。早期 CPU 页大小能力与 GOP 参数见 [UEFI 探针记录](research/CHIRON_UEFI_PROBE.zh-CN.md)。

@@ -15,6 +15,9 @@ permissions:
 
 jobs:
   desktop:
+    # This historical replay depends on a private Apple system-volume artifact.
+    # Public builds should recreate the system volume from the upstream recipe.
+    if: github.event.repository.private
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
