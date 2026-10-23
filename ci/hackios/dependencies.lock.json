@@ -10,7 +10,8 @@
     "release_id": 120153181,
     "asset_id": 124862108,
     "asset_bytes": 86163280,
+    "sha256": "a72a7a577e2fbe2838b6b5e9c72034fa7d114af96f0e1d4b016f18730ce4056e",
     "source_tag_commit": "e99a150316ad22ad595d679c4a94e2d3938992cf",
-    "note": "Upstream supplies no asset digest; record the downloaded SHA-256 in each run."
+    "note": "Digest recorded from the first cloud run; upstream supplied no separate digest."
   }
 }

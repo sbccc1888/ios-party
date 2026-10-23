@@ -117,6 +117,8 @@ def prepare(work, evidence):
     if archive.stat().st_size != deps["toolchain"]["asset_bytes"]:
         raise RuntimeError("toolchain asset size changed")
     toolchain = digest(archive)
+    if toolchain["sha256"] != deps["toolchain"]["sha256"]:
+        raise RuntimeError("toolchain asset hash differs from the recorded cloud input")
     command(["tar", "-xJf", archive, "-C", theos / "toolchain"])
     if not (theos / "toolchain/linux/iphone/bin/ld").exists():
         raise RuntimeError("toolchain did not contain the expected cctools linker")

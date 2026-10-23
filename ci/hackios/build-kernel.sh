@@ -6,6 +6,18 @@ WORK=$1
 EVIDENCE=$2
 export THEOS="$WORK/theos"
 export JOBS=2
+collect_logs() {
+  local status=$?
+  for log in "$WORK/kernel/xnu-deps/"*.log; do
+    test -f "$log" || continue
+    cp "$log" "$EVIDENCE/dependency-$(basename "$log")"
+    if [ "$status" -ne 0 ]; then
+      printf '\n--- %s ---\n' "$log"
+      tail -n 100 "$log"
+    fi
+  done
+}
+trap collect_logs EXIT
 cd "$WORK/kernel"
 bash xnu/apply.sh
 bash xnu-deps/setup.sh
