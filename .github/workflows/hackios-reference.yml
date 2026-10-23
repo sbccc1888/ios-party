@@ -40,12 +40,20 @@ jobs:
           sudo apt-get -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends \
             build-essential clang lld llvm flex bison m4 perl autoconf automake \
             curl xz-utils uuid-dev libxml2-dev libssl-dev zlib1g-dev pkg-config libtinfo6 \
-            7zip qemu-system-arm qemu-efi-aarch64 python3-pil
+            7zip qemu-system-arm qemu-efi-aarch64 ipxe-qemu python3-pil
           if ! command -v 7z >/dev/null; then
             sudo ln -s "$(command -v 7zz)" /usr/local/bin/7z
           fi
           df -h "$RUNNER_TEMP"
           free -m
+      - name: Check QEMU startup dependencies before the full build
+        run: |
+          set +e
+          timeout 3 qemu-system-aarch64 -M virt,gic-version=3 -cpu cortex-a76 -m 512M \
+            -display none -serial none -monitor none -S
+          rc=$?
+          set -e
+          test "$rc" -eq 124
       - name: Prepare locked source workspace and cross toolchain
         run: python3 ci/hackios/cloud.py prepare --work "$HACKIOS_WORK" --evidence "$HACKIOS_EVIDENCE"
       - name: Build fresh 8796 kernel and fetch verified 20F66 files

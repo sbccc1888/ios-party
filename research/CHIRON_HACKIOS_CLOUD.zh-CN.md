@@ -25,6 +25,7 @@
 | --- | --- | --- |
 | [39793797768](https://github.com/to-mid/ios-party/actions/runs/39793797768) | `81695594ef2b135255d98677c61a77d66d78f45b` | 20F66 获取与身份/ZIP完整性检查完成；8796 源码补丁已应用；上游依赖脚本在 `exporthdrs` 阶段失败。未链接内核，未生成 APFS 系统卷，未运行 QEMU |
 | [39884525307](https://github.com/to-mid/ios-party/actions/runs/39884525307) | `6ce83cad006b7bac4967d64e6182a5774bf9b85b` | 内层诊断确认 SETUP 宿主工具的 `hostcompat.h:44` 缺少 `uuid/uuid.h`。未链接内核或运行QEMU；20F66文件再次通过校验 |
+| [39888339946](https://github.com/to-mid/ios-party/actions/runs/39888339946) | `5fe0be57b51bb222692af98b0da6160bb7717136` | 源码内核/loader链接、目标身份、原配方用户态及两份APFS卷构建通过；卷内dyld/launchd读回通过。QEMU在内核执行前因缺少`efi-virtio.rom`退出1，没有截图或来宾运行里程碑 |
 
 首轮开始于 2026-10-22 14:13 UTC，结束于 14:45 UTC。
 第二轮为 2026-10-23 01:32–01:39 UTC。
@@ -53,16 +54,47 @@ BuildManifest 的 ProductVersion/BuildVersion 分别为 16.5/20F66，支持上�
 dyld 与 launchd 均为 cputype `0x100000c`、subtype 0 的普通 arm64 Mach-O。
 主 cache magic 为 `dyld_v1   arm64`；43 个非 symbols 运行时 cache 文件共
 2,722,512,896 字节（约 2.536GiB），逐文件哈希在原始 `apple-inputs.json`。
+两轮独立获取产生完全相同的该清单，已保存为
+`research/hackios-reuse/cloud-inputs-20F66.json`，不含Apple程序或镜像字节。
 这解决了 C1 的目标文件获取与身份缺口，尚不证明代码签名页、slide 或运行兼容。
 
 首轮 Linux 工具链资产的 SHA-256 为
 `a72a7a577e2fbe2838b6b5e9c72034fa7d114af96f0e1d4b016f18730ce4056e`；
 上游资产未另提供 digest，此值来源于首轮实际下载，后续运行强制匹配。
 
+## 第三轮构建证据
+
+原始构建包为`dist/hackios-reference-39888339946-build/`。
+已在本机独立重算下载内核哈希、核对空的`kernel-undefined.txt`，
+并核对APFS读回的dyld/launchd哈希与目标原件一致。
+
+| 产物 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| 源码内核（普通arm64 Mach-O） | 15160872 | `0e5acecc038143e5ff7e71cc190a8cccd6461200df097d185248e2a569d7d4bd` |
+| 本轮EFI loader | 68096 | `bf585c2c8762e1ac62009a2f8b476190aa032d2af6951d03f379e623309f9e9e` |
+| 小APFS卷root.apfs | 4194304 | `cb4a241af55cdadefe42580c097f198807364ed555ce0f8a2f6ab375ef5c450f` |
+| 系统APFS卷system.apfs | 2492219392 | `f781f6111ab3cd84a22dc2b385d2ceb51a706c16c913768e2ff3be26f2f65fa4` |
+
+`stage0`、`init`、`hello_dyn`、`surf_test`、`libredwood.dylib`和
+`libredwood-sb.dylib`均由本轮源码编译，哈希在`payloads.json`；
+配方为`REST=1 SHARE=1`，没有启用GL或PREBUILT。
+主`rc`保持原版`exec /sbin/launchd.ios`，demo job保持上游原始列表。
+
+make原始退出码为2，完整日志保留：内核已在日志1710行链接，随后生成strip产物；
+后续错误来自导出/符号集检查，本轮日志有222行`exported name not in import list`，
+不是README所述217的简单转录。内核无未解析符号，但不据此认证任意外部kext ABI，
+运行资格仍由实际QEMU结果决定。
+
+第三轮`qemu-serial.log`只有
+`qemu-system-aarch64: failed to find romfile "efi-virtio.rom"`；
+`qemu-run.json`记载returncode=1、无输入/截图动作。
+这是缩小apt依赖时漏掉`ipxe-qemu`的环境问题；修正为显式安装该包，
+并在完整构建前检查QEMU能启动暂停的空虚拟机，不能将该环境检查记为XNU启动。
+
 ## 待验收
 
-下一步依次为：取得明确的内核构建诊断并完成源码链接；生成原配方两份 APFS 卷；
+构建与APFS读回已完成；下一步为：
 运行目标 dyld/cache、动态 hello 返回7、原版 launchd PID1、IOSurface 跨进程检查；
 采集 backboardd/SpringBoard、IOMFB swap 和多时点屏幕/输入证据。
 
-只有取得相应实际观察才更新通过项。当前没有 QEMU 运行、桌面或 MIX2 启动成功结论。
+只有取得相应实际观察才更新通过项。当前尚无QEMU运行完成、桌面或MIX2启动成功结论。
