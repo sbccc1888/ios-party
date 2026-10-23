@@ -32,14 +32,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential uuid-dev nasm clang lld llvm mtools dosfstools
-      - name: Build the MIX2 EFI bootstrap
-        run: bash ci/hackios/build-chiron-entry.sh
-      - name: Save the EFI bootstrap independently
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - name: Reuse the already compiled MIX2 EFI bootstrap
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: chiron-hackios-entry
           path: dist/chiron-entry/
-          retention-days: 7
+          github-token: ${{ github.token }}
+          run-id: '39910665037'
       - name: Reuse the physical-qualified zero-tail firmware container
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
@@ -52,7 +51,7 @@ jobs:
           PORT_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&event=push" \
             --jq '.workflow_runs[]|select(.name=="MIX2 HackiOS port")|.id' | head -1)
           test -n "$PORT_RUN"
-          for n in $(seq 1 90); do
+          for n in $(seq 1 120); do
             state=$(gh run view "$PORT_RUN" --repo "$GITHUB_REPOSITORY" --json status --jq .status)
             if [ "$state" = completed ]; then break; fi
             sleep 20

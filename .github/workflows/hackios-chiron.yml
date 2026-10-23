@@ -57,6 +57,14 @@ jobs:
         run: python3 ci/hackios/chiron.py build-fetch --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
       - name: Build original APFS closure and phone USB payload
         run: python3 ci/hackios/chiron.py images --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
+      - name: Preserve the exact system volume before runtime diagnostics
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chiron-ios165-system
+          path: dist/chiron-system/system.apfs
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
       - name: Preserve build and phone-loader inputs
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -76,10 +84,3 @@ jobs:
           path: dist/hackios-chiron/
           retention-days: 7
           compression-level: 1
-      - name: Publish the selected system volume for resident USB transfer
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: chiron-ios165-system
-          path: .cache/hackios-chiron/kernel/userland/system.apfs
-          retention-days: 7
-          compression-level: 0

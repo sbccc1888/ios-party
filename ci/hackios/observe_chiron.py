@@ -18,8 +18,8 @@ def capture(helper, destination):
     with socket.create_connection(("127.0.0.1", 1234), timeout=5) as connection:
         packet = Packets(connection).request
         packet("qSupported:qXfer:features:read+")
-        packet(None)
         try:
+            packet("?")
             def feature(name):
                 text = ""
                 offset = 0

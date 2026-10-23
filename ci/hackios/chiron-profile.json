@@ -28,7 +28,7 @@
     "physical_base": 4294967296,
     "resident_root_base": 4429185024,
     "guest_ram_gb": 7,
-    "guest_seconds": 720
+    "guest_seconds": 540
   },
   "hardware_boot_qualified": false
 }

@@ -92,6 +92,9 @@ def images(work, evidence):
         "system_root": cloud.digest(kernel / "userland/system.apfs"),
         "hardware_boot_qualified": False,
     })
+    exported = ROOT / "dist/chiron-system/system.apfs"
+    exported.parent.mkdir(parents=True, exist_ok=True)
+    os.link(kernel / "userland/system.apfs", exported)
 
 
 def qemu(work, evidence):
@@ -101,12 +104,23 @@ def qemu(work, evidence):
         run.read_text(), "-cpu cortex-a76", "-cpu cortex-a53 -gdb tcp:127.0.0.1:1234"))
     ios = kernel / "qemu/run-ios.sh"
     text = apply_chiron.replace_once(ios.read_text(), "RD_ADDR=0xFC000000", "RD_ADDR=0x108000000")
+    seconds = json.loads(PROFILE.read_text())["qemu"]["guest_seconds"]
+    text = apply_chiron.replace_once(text, "SECS=${1:-60}; shift", f"SECS={seconds}; shift")
     text = apply_chiron.replace_once(text, '--rdres "$(printf', '--physbase 100000000 --rdres "$(printf')
     ios.write_text(text)
     stop = threading.Event()
     def observe():
-        if not stop.wait(240):
-            observe_chiron.capture(work / "unixnu-observer", evidence / "actual-cpu-registers.json")
+        if not stop.wait(270):
+            touch = cloud.load_module("chiron_qmp", kernel / "qemu/touch.py")
+            qmp = touch.Qmp()
+            qmp.command("stop")
+            try:
+                observe_chiron.capture(work / "unixnu-observer", evidence / "actual-cpu-registers.json")
+            finally:
+                if not qmp.command("query-status")["running"]:
+                    qmp.command("cont")
+                qmp.file.close()
+                qmp.sock.close()
     observer = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     future = observer.submit(observe)
     try:
@@ -119,6 +133,7 @@ def qemu(work, evidence):
             data = json.loads(result.read_text())
             data.update({
                 "cpu": "cortex-a53", "physical_base": "0x100000000",
+                "guest_budget_seconds": seconds,
                 "kernel_window_limit": "0xbc000000", "native_granule_required": 4096,
                 "pan_required": False, "lse_required": False,
                 "chiron_cpu_qualified": False, "hardware_observed": False,
