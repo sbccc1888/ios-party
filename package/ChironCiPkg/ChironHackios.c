@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
-#include <Uefi.h>
+#include <PiDxe.h>
 #include <Guid/FileInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/FirmwareVolume2.h>
