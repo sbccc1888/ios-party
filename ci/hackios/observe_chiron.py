@@ -42,7 +42,7 @@ def capture(helper, destination):
                     if name in wanted:
                         raw = packet(f'p{int(register.attrib["regnum"]):x}')
                         regs[name] = hex(int.from_bytes(bytes.fromhex(raw), "little"))
-            required = wanted - {"MPIDR_EL1"}
+            required = wanted - {"MPIDR_EL1", "MIDR_EL1"}
             destination.write_text(json.dumps({"system_registers": regs, "qemu_only": True}, indent=2) + "\n")
             if not required <= regs.keys():
                 raise RuntimeError(f"missing system registers: {required - regs.keys()}")

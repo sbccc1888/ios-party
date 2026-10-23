@@ -1,0 +1,120 @@
+{
+  "candidate": {
+    "image": "MIX2-HackiOS-8796-usb.img",
+    "bytes": 26697728,
+    "sha256": "0ce4ccd90b148ec208bb1a028f30703d45c7fdf12ca36048923fa8666aea0372",
+    "template_sha256": "f0425c454eaab78ffe5f74084ed89adca0457fdf5c49d7fb0839db77d266006b",
+    "firmware_bytes_unchanged": true,
+    "kernel_binary_instruction_patching": false,
+    "transport_readback_verified": true,
+    "omitted_tail_zero": true,
+    "physical_transport_bytes": 25165824,
+    "logical_transport_bytes": 50331648,
+    "qualification": {
+      "cortex_a53_no_pan_lse_desktop": true,
+      "hardware_granule": 4096,
+      "high_memory_base": "0x100000000",
+      "kernel_window_bytes": 3154116608,
+      "registers": {
+        "tcr": "0x22a51a251a",
+        "sctlr": "0x3454593d",
+        "mmfr0": "0x1122",
+        "mmfr1": "0x0",
+        "isar0": "0x11120",
+        "mpidr": "0x0"
+      },
+      "phone_timer_intid": 19,
+      "qemu_timer_intid": 27,
+      "hardware_boot_qualified": false,
+      "scope": "A53 4K/no-PAN/no-LSE high-bank simulation, not physical Kryo qualification"
+    },
+    "phone_inputs": {
+      "profile": {
+        "schema": "hackios-chiron-port-v1",
+        "device": "chiron",
+        "kernel_arch": "armv8-a",
+        "pan": false,
+        "outline_atomics": false,
+        "cpu_count": 1,
+        "boot_mpidr": 0,
+        "observed_mpidrs": [
+          0,
+          1,
+          2,
+          3,
+          256,
+          257,
+          258,
+          259
+        ],
+        "gicd": 396361728,
+        "gicr": 397410304,
+        "gicr_size": 1048576,
+        "virtual_timer_intid": 19,
+        "timer_frequency": 19200000,
+        "psci": "smc",
+        "framebuffer": {
+          "base": 2638217216,
+          "width": 1080,
+          "height": 2160,
+          "stride": 4320,
+          "gop_format": 1
+        },
+        "kernel_window_limit": 3154116608,
+        "resident_kernel_reserve": 520093696,
+        "payload_base": 4026531840,
+        "qemu": {
+          "cpu": "cortex-a53",
+          "physical_base": 4294967296,
+          "resident_root_base": 4429185024,
+          "guest_ram_gb": 7,
+          "guest_seconds": 540
+        },
+        "hardware_boot_qualified": false
+      },
+      "payload": {
+        "bytes": 19338576,
+        "sha256": "e94be86cfd26d2397211ffdc7d6107be7533050c2381059e4059599a0d80494d",
+        "crc32": "d0055774"
+      },
+      "loader": {
+        "bytes": 70144,
+        "sha256": "0efedc60d66f460883d929b30b9f4bfc23ffa04c041a77478793ff58ef3dbfad",
+        "crc32": "b54476cf"
+      },
+      "small_root": {
+        "bytes": 4194304,
+        "sha256": "e53a0e6d8160e9a137a40dc39d0bfc3364e41bbe252070f4867fd0092598441c",
+        "crc32": "ce46506a"
+      },
+      "system_root": {
+        "bytes": 2492219392,
+        "sha256": "f781f6111ab3cd84a22dc2b385d2ceb51a706c16c913768e2ff3be26f2f65fa4",
+        "crc32": "64f58d9e"
+      },
+      "hardware_boot_qualified": false,
+      "usb_backend": "existing EDK2 AndroidFastbootTransport, via bootstrap proxy",
+      "usb_transport_hardware_qualified": false,
+      "phone_loader_source_sha256": "0a2fbc19ebd8f24afdf97d08335c7aaeeea9bdef04e5a278617ad3e6a826c6ad"
+    },
+    "entry_sha256": "cbc1db6d007d5eeecf9f4c7cc1acd9574517393883c85c34875aa9bdb0682bad",
+    "phone_loader_sha256": "0efedc60d66f460883d929b30b9f4bfc23ffa04c041a77478793ff58ef3dbfad",
+    "hardware_boot_qualified": false,
+    "next_action": "User boots the candidate, then uploads the exact system.apfs to the resident xnuloader."
+  },
+  "local_verification": {
+    "image_sha256_verified": true,
+    "boot_sha1_verified": true,
+    "firmware_payload_identical_to_physical_qualified_template": true,
+    "fat_payload_kernel_and_efi_hashes_verified": true,
+    "source_kernel_sha256": "e81c527aac1c9310374dc1245869a1bcb26cd8414e6842533fb6212c045acb2b",
+    "system_sha256_verified": "f781f6111ab3cd84a22dc2b385d2ceb51a706c16c913768e2ff3be26f2f65fa4",
+    "hardware_boot_qualified": false
+  },
+  "source_kernel_run": "39905608161",
+  "runtime_run": "39918716948",
+  "qualification_run": "39922183783",
+  "package_run": "39922978925",
+  "local_directory": "dist/mix2-hackios",
+  "hardware_boot_qualified": false
+}

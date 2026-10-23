@@ -145,6 +145,9 @@ def qemu(work, evidence):
 def summarize(work, evidence):
     cloud.summarize(work, evidence)
     text = (evidence / "qemu-serial.log").read_text(errors="replace")
+    identity = re.search(r"CurrentEL=1 MIDR=([0-9a-f]+) MMFR0=([0-9a-f]+)", text)
+    if not identity or (int(identity[1], 16) >> 4) & 0xfff != 0xd03:
+        raise RuntimeError("missing actual A53 loader CPU identity")
     raw = json.loads((evidence / "actual-cpu-registers.json").read_text())["system_registers"]
     tcr, sctlr, mmfr0, mmfr1, isar0 = [
         int(raw[name], 16) for name in ("TCR_EL1", "SCTLR_EL1", "ID_AA64MMFR0_EL1", "ID_AA64MMFR1_EL1", "ID_AA64ISAR0_EL1")]
@@ -159,7 +162,7 @@ def summarize(work, evidence):
         "cortex_a53_no_pan_lse_desktop": True,
         "hardware_granule": 4096, "high_memory_base": "0x100000000",
         "kernel_window_bytes": 0xbc000000,
-        "registers": dict(tcr=hex(tcr), sctlr=hex(sctlr), mmfr0=hex(mmfr0),
+        "registers": dict(midr=hex(int(identity[1], 16)), tcr=hex(tcr), sctlr=hex(sctlr), mmfr0=hex(mmfr0),
                           mmfr1=hex(mmfr1), isar0=hex(isar0), mpidr=hex(mpidr)),
         "phone_timer_intid": 19, "qemu_timer_intid": 27,
         "hardware_boot_qualified": False,
