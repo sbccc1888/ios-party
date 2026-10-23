@@ -24,6 +24,8 @@
   gEfiSimpleFileSystemProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiFirmwareVolume2ProtocolGuid
+  gEfiLoadedImageProtocolGuid
+  gEfiDriverBindingProtocolGuid
 
 [Guids]
   gEfiFileInfoGuid

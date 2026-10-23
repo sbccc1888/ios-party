@@ -2,7 +2,9 @@
 #include <PiDxe.h>
 #include <Guid/FileInfo.h>
 #include <Protocol/BlockIo.h>
+#include <Protocol/DriverBinding.h>
 #include <Protocol/FirmwareVolume2.h>
+#include <Protocol/LoadedImage.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DevicePathLib.h>
@@ -18,15 +20,71 @@ STATIC EFI_GUID mQcomUsbGuid =
   {0xd9d9ce48,0x44b8,0x4f49,{0x8e,0x3e,0x2a,0x3b,0x92,0x7d,0xc6,0xc1}};
 STATIC EFI_GUID mUsbDeviceFileGuid =
   {0x3299a266,0x15f0,0x4346,{0x83,0x18,0x71,0x63,0x36,0x73,0x6d,0x3e}};
+STATIC EFI_GUID mUsbInitGuid =
+  {0x2da15ac7,0x4909,0x4c4c,{0xb8,0xc3,0xa7,0x42,0x19,0x5e,0xa4,0x6e}};
+STATIC EFI_GUID mUsbInitFileGuid =
+  {0x0a134f0e,0x075e,0x40b3,{0x9c,0x63,0x3b,0x39,0x06,0x80,0x46,0x63}};
+STATIC EFI_GUID mDwc3FileGuid =
+  {0x94f8a6a7,0xdc34,0x4101,{0x88,0xc1,0x99,0x17,0x9c,0xce,0xae,0x83}};
+STATIC EFI_GUID mUsbfnGuid =
+  {0x32d2963a,0xfe5d,0x4f30,{0xb6,0x33,0x6e,0x5d,0xc5,0x58,0x03,0xcc}};
+
+// EFIUsbInitProtocol.h: the protocol chooses the default core when CoreNum is NULL.
+typedef struct {
+  UINT8 CoreNum;
+  UINT32 ModeType;
+} QCOM_USB_CORE_INFO;
+
+typedef struct QCOM_USB_INIT QCOM_USB_INIT;
+struct QCOM_USB_INIT {
+  UINT64 Revision;
+  EFI_STATUS (EFIAPI *QueryCoreCount)(QCOM_USB_INIT *, UINT8 *);
+  EFI_STATUS (EFIAPI *QueryCoreInfo)(QCOM_USB_INIT *, UINT8 *, QCOM_USB_CORE_INFO *);
+  EFI_STATUS (EFIAPI *StartController)(QCOM_USB_INIT *, UINT8, UINT32);
+  EFI_STATUS (EFIAPI *StopController)(QCOM_USB_INIT *, UINT8, UINT32);
+};
 
 STATIC EFI_STATUS
-PrepareUsb(EFI_HANDLE Parent)
+FindFirmwareImage(EFI_GUID *FileGuid, EFI_HANDLE *Image)
 {
+  EFI_STATUS Status;
   EFI_HANDLE *Handles;
-  EFI_HANDLE Image;
   UINTN Count;
   UINTN Index;
-  VOID *Usb;
+  EFI_LOADED_IMAGE_PROTOCOL *Loaded;
+  EFI_DEVICE_PATH_PROTOCOL *Node;
+
+  Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiLoadedImageProtocolGuid,
+                                  NULL, &Count, &Handles);
+  if (EFI_ERROR(Status)) return Status;
+  Status = EFI_NOT_FOUND;
+  for (Index = 0; Index < Count; Index++) {
+    if (EFI_ERROR(gBS->HandleProtocol(Handles[Index], &gEfiLoadedImageProtocolGuid,
+                                      (VOID **)&Loaded))) continue;
+    for (Node = Loaded->FilePath; Node != NULL && !IsDevicePathEnd(Node);
+         Node = NextDevicePathNode(Node)) {
+      if (DevicePathType(Node) == MEDIA_DEVICE_PATH &&
+          DevicePathSubType(Node) == MEDIA_PIWG_FW_FILE_DP &&
+          DevicePathNodeLength(Node) == sizeof(MEDIA_FW_VOL_FILEPATH_DEVICE_PATH) &&
+          CompareGuid(&((MEDIA_FW_VOL_FILEPATH_DEVICE_PATH *)Node)->FvFileName, FileGuid)) {
+        *Image = Handles[Index];
+        Status = EFI_SUCCESS;
+        break;
+      }
+    }
+    if (!EFI_ERROR(Status)) break;
+  }
+  FreePool(Handles);
+  return Status;
+}
+
+STATIC EFI_STATUS
+LoadFirmwareDriver(EFI_HANDLE Parent, EFI_GUID *FileGuid,
+                   CONST CHAR16 *Name, EFI_HANDLE *Image)
+{
+  EFI_HANDLE *Handles;
+  UINTN Count;
+  UINTN Index;
   EFI_STATUS Status;
   EFI_FIRMWARE_VOLUME2_PROTOCOL *Fv;
   EFI_FV_FILETYPE Type;
@@ -37,8 +95,8 @@ PrepareUsb(EFI_HANDLE Parent)
   EFI_DEVICE_PATH_PROTOCOL *Path;
   EFI_DEVICE_PATH_PROTOCOL *Base;
 
-  Status = gBS->LocateProtocol(&mQcomUsbGuid, NULL, &Usb);
-  Print(L"HK2: Qualcomm USB protocol: %r\n", Status);
+  Status = FindFirmwareImage(FileGuid, Image);
+  Print(L"HK3: resident %s: %r\n", Name, Status);
   if (!EFI_ERROR(Status)) return EFI_SUCCESS;
   if (Status != EFI_NOT_FOUND) return Status;
 
@@ -51,24 +109,21 @@ PrepareUsb(EFI_HANDLE Parent)
                                 (VOID **)&Fv);
     if (EFI_ERROR(Status)) continue;
     Size = 0;
-    Status = Fv->ReadFile(Fv, &mUsbDeviceFileGuid, NULL, &Size, &Type,
+    Status = Fv->ReadFile(Fv, FileGuid, NULL, &Size, &Type,
                          &Attributes, &Authentication);
     if (EFI_ERROR(Status)) continue;
     Base = DevicePathFromHandle(Handles[Index]);
     if (Base == NULL) { Status = EFI_NOT_FOUND; continue; }
-    EfiInitializeFwVolDevicepathNode(&Node, &mUsbDeviceFileGuid);
+    EfiInitializeFwVolDevicepathNode(&Node, FileGuid);
     Path = AppendDevicePathNode(Base, (EFI_DEVICE_PATH_PROTOCOL *)&Node);
     if (Path == NULL) { Status = EFI_OUT_OF_RESOURCES; break; }
-    Print(L"HK2: loading Qualcomm UsbDeviceDxe from firmware\n");
-    Status = gBS->LoadImage(FALSE, Parent, Path, NULL, 0, &Image);
+    Print(L"HK3: loading %s from firmware\n", Name);
+    Status = gBS->LoadImage(FALSE, Parent, Path, NULL, 0, Image);
     FreePool(Path);
-    Print(L"HK2: load UsbDeviceDxe: %r\n", Status);
+    Print(L"HK3: load %s: %r\n", Name, Status);
     if (EFI_ERROR(Status)) break;
-    Status = gBS->StartImage(Image, NULL, NULL);
-    Print(L"HK2: start UsbDeviceDxe: %r\n", Status);
-    if (EFI_ERROR(Status)) break;
-    Status = gBS->LocateProtocol(&mQcomUsbGuid, NULL, &Usb);
-    Print(L"HK2: Qualcomm USB protocol after start: %r\n", Status);
+    Status = gBS->StartImage(*Image, NULL, NULL);
+    Print(L"HK3: start %s: %r\n", Name, Status);
     break;
   }
   FreePool(Handles);
@@ -76,11 +131,78 @@ PrepareUsb(EFI_HANDLE Parent)
 }
 
 STATIC EFI_STATUS
+PrepareUsbFunction(EFI_HANDLE Parent)
+{
+  EFI_STATUS Status;
+  EFI_STATUS StartStatus;
+  VOID *Usbfn;
+  QCOM_USB_INIT *Init;
+  QCOM_USB_CORE_INFO Core;
+  EFI_HANDLE Image;
+  EFI_DRIVER_BINDING_PROTOCOL *Binding;
+
+  Status = gBS->LocateProtocol(&mUsbfnGuid, NULL, &Usbfn);
+  Print(L"HK3: USB Function IO before init: %r\n", Status);
+  if (!EFI_ERROR(Status)) return EFI_SUCCESS;
+  if (Status != EFI_NOT_FOUND) return Status;
+  Status = gBS->LocateProtocol(&mUsbInitGuid, NULL, (VOID **)&Init);
+  Print(L"HK3: USB Init protocol: %r\n", Status);
+  if (Status == EFI_NOT_FOUND) {
+    Status = LoadFirmwareDriver(Parent, &mUsbInitFileGuid, L"UsbInitDxe", &Image);
+    if (EFI_ERROR(Status)) return Status;
+    Status = gBS->LocateProtocol(&mUsbInitGuid, NULL, (VOID **)&Init);
+    Print(L"HK3: USB Init after load: %r\n", Status);
+  }
+  if (EFI_ERROR(Status)) return Status;
+  if (Init->Revision < 0x10000 || Init->QueryCoreInfo == NULL ||
+      Init->StartController == NULL) return EFI_UNSUPPORTED;
+
+  Status = LoadFirmwareDriver(Parent, &mDwc3FileGuid, L"UsbfnDwc3Dxe", &Image);
+  if (EFI_ERROR(Status)) return Status;
+  Status = gBS->HandleProtocol(Image, &gEfiDriverBindingProtocolGuid, (VOID **)&Binding);
+  Print(L"HK3: DWC3 driver binding: %r\n", Status);
+  if (EFI_ERROR(Status)) return Status;
+
+  ZeroMem(&Core, sizeof(Core));
+  Status = Init->QueryCoreInfo(Init, NULL, &Core);
+  Print(L"HK3: query default USB core: %r\n", Status);
+  if (EFI_ERROR(Status)) return Status;
+  Print(L"HK3: USB core %u supported modes %x\n", (UINT32)Core.CoreNum, Core.ModeType);
+  if ((Core.ModeType & (0x02 | 0x04)) == 0) return EFI_UNSUPPORTED;
+  // The vendor API creates its peripheral handle and connects its driver stack.
+  StartStatus = Init->StartController(Init, Core.CoreNum, 0x02);
+  Print(L"HK3: start peripheral controller: %r\n", StartStatus);
+  Status = gBS->LocateProtocol(&mUsbfnGuid, NULL, &Usbfn);
+  Print(L"HK3: USB Function IO after init: %r\n", Status);
+  if (EFI_ERROR(StartStatus)) return StartStatus;
+  return Status;
+}
+
+STATIC EFI_STATUS
+PrepareUsb(EFI_HANDLE Parent)
+{
+  EFI_STATUS Status;
+  EFI_HANDLE Image;
+  VOID *Usb;
+
+  Status = gBS->LocateProtocol(&mQcomUsbGuid, NULL, &Usb);
+  Print(L"HK3: Qualcomm USB protocol: %r\n", Status);
+  if (Status == EFI_NOT_FOUND) {
+    Status = LoadFirmwareDriver(Parent, &mUsbDeviceFileGuid, L"UsbDeviceDxe", &Image);
+    if (EFI_ERROR(Status)) return Status;
+    Status = gBS->LocateProtocol(&mQcomUsbGuid, NULL, &Usb);
+    Print(L"HK3: Qualcomm USB after load: %r\n", Status);
+  }
+  if (EFI_ERROR(Status)) return Status;
+  return PrepareUsbFunction(Parent);
+}
+
+STATIC EFI_STATUS
 ShowFailure(CONST CHAR16 *Stage, EFI_STATUS Status)
 {
   EFI_INPUT_KEY Key;
   UINTN Index;
-  Print(L"\nHK2 FAIL %s\n%r  [%016lx]\n", Stage, Status, (UINT64)Status);
+  Print(L"\nHK3 FAIL %s\n%r  [%016lx]\n", Stage, Status, (UINT64)Status);
   Print(L"Take a photo of this screen. Press a key to return.\n");
   if (gST->ConIn != NULL && gST->ConIn->WaitForKey != NULL) {
     while (gST->ConIn->ReadKeyStroke(gST->ConIn, &Key) == EFI_SUCCESS) { }
@@ -105,7 +227,7 @@ ReadPayload(EFI_FILE_PROTOCOL *Root)
 
   Status = Root->Open(Root, &File, L"\\EFI\\HackiOS\\payload.bin", EFI_FILE_MODE_READ, 0);
   if (EFI_ERROR(Status)) return Status;
-  Print(L"HK2: payload file found\n");
+  Print(L"HK3: payload file found\n");
   Status = File->GetInfo(File, &gEfiFileInfoGuid, &InfoSize, NULL);
   if (Status != EFI_BUFFER_TOO_SMALL || InfoSize > 4096) {
     Status = EFI_COMPROMISED_DATA;
@@ -122,7 +244,7 @@ ReadPayload(EFI_FILE_PROTOCOL *Root)
   Status = gBS->AllocatePages(AllocateAddress, EfiLoaderData,
                              EFI_SIZE_TO_PAGES(0x04000000), &Address);
   if (EFI_ERROR(Status)) {
-    Print(L"HK2: reserve 64 MiB at %lx failed: %r\n", Address, Status);
+    Print(L"HK3: reserve 64 MiB at %lx failed: %r\n", Address, Status);
     goto Done;
   }
   Bytes = (UINTN)Info->FileSize;
@@ -150,11 +272,11 @@ StartLoader(EFI_HANDLE Parent, EFI_HANDLE Volume)
 
   Path = FileDevicePath(Volume, L"\\EFI\\HackiOS\\loader.efi");
   if (Path == NULL) return ShowFailure(L"LOADER PATH", EFI_OUT_OF_RESOURCES);
-  Print(L"HK2: loading loader from RAM filesystem\n");
+  Print(L"HK3: loading loader from RAM filesystem\n");
   Status = gBS->LoadImage(FALSE, Parent, Path, NULL, 0, &Image);
   FreePool(Path);
   if (EFI_ERROR(Status)) return ShowFailure(L"LOAD LOADER", Status);
-  Print(L"HK2: starting native Qualcomm USB loader; UEFI remains resident\n");
+  Print(L"HK3: starting native Qualcomm USB loader; UEFI remains resident\n");
   Status = gBS->StartImage(Image, NULL, NULL);
   return ShowFailure(L"START LOADER", Status);
 }
@@ -168,7 +290,7 @@ UefiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
   UINTN Index;
 
   (VOID)SystemTable;
-  Print(L"\nHK2 EFI ENTRY: chiron / 8796 / 20F66\n");
+  Print(L"\nHK3 EFI ENTRY: chiron / 8796 / 20F66\n");
   Status = PrepareUsb(ImageHandle);
   if (EFI_ERROR(Status)) return ShowFailure(L"PREPARE QUALCOMM USB", Status);
   Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiSimpleFileSystemProtocolGuid,

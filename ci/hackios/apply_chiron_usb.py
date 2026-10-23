@@ -17,6 +17,13 @@ def apply(source):
     )
     text = replace_once(
         text,
+        '\t/* Ask the platform to bring the controller up',
+        '\t/* HK3 prepares the chiron peripheral stack with checked return statuses. */\n'
+        '\tif (PLAT != &platform_chiron)\n'
+        '\t/* Ask the platform to bring the controller up',
+    )
+    text = replace_once(
+        text,
         "\tefi_status s = USB->start_ex(&set);",
         '\tprint("usb: Qualcomm protocol revision %x\\n", USB->revision);\n'
         "\tif (USB->start_ex == NULL || USB->send == NULL || USB->handle_event == NULL ||\n"
