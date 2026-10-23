@@ -1,0 +1,194 @@
+{
+  "review": {
+    "schema": "hackios-reference-local-review-v1",
+    "run_id": "39894576642",
+    "project_sha": "e0722d9c3760349236de0a51f1a635298eff3853",
+    "qemu_only": true,
+    "runtime_closure_observed": true,
+    "desktop_boot_qualified": true,
+    "hardware_observed": false,
+    "chiron_cpu_qualified": false,
+    "kernel_bytes_verified": true,
+    "loader_bytes_verified": true,
+    "kernel_unchanged_from_run": "39890316014",
+    "system_apfs_and_rebuilt_programs_unchanged": true,
+    "screen_bytes_verified": true,
+    "log_sha256": "3a5865ca13ff24cb6a32eb9c71abf6fc74a06970a3d0d988ae312e5b57b24b6e",
+    "visual_review": {
+      "frames": [
+        "screens/t0370.png",
+        "screens/t0680.png"
+      ],
+      "observed": "SpringBoard home screen with application grid, dock, changing status clock and analog clock; black wallpaper, blank Weather/Calendar widgets",
+      "input_scope": "QMP inputs and guest virtio input accepted; app launch and complete navigation not qualified"
+    },
+    "cloud_automatic_report": {
+      "sha256": "9aed88d1a58fe5c498f02529996463843ee229bff30c2d33682c717a1b69cc5d",
+      "desktop_flag": "left false intentionally; human visual review is recorded separately"
+    }
+  },
+  "payloads": {
+    "kernel": {
+      "bytes": 15160872,
+      "sha256": "6b862b18aa099297909a8fdf6fbb6d07124011c29f63fc939765bbf854934b23",
+      "crc32": "36e8c018"
+    },
+    "loader": {
+      "bytes": 68608,
+      "sha256": "534efb4486b3758cc39a6e74a8ca01d7caf1149f46f59a7fb671f6ce0784f6bd",
+      "crc32": "58895536"
+    },
+    "root": {
+      "bytes": 4194304,
+      "sha256": "586ebac488e5a7d1c5e07e85749c4274941be5e4f859427c0889209c4c8b2c98",
+      "crc32": "549a87c2"
+    },
+    "system": {
+      "bytes": 2492219392,
+      "sha256": "f781f6111ab3cd84a22dc2b385d2ceb51a706c16c913768e2ff3be26f2f65fa4",
+      "crc32": "64f58d9e"
+    },
+    "rebuilt_userland": {
+      "stage0": {
+        "bytes": 34560,
+        "sha256": "11d11c5731ca16d4e654e9e9f0551535ed25bb7854e533198ddceb9f4b75a078",
+        "crc32": "b2e593fc"
+      },
+      "init": {
+        "bytes": 52280,
+        "sha256": "6df664245e3a675d838e55356fc4fa33d5bd115d4e59b45840f5ce41153e706d",
+        "crc32": "5a711e35"
+      },
+      "hello_dyn": {
+        "bytes": 66128,
+        "sha256": "a8baa9ab38333280369b0824aafaf92c7aa6a85851ff0b2551a4c711dbe59cfd",
+        "crc32": "59259c63"
+      },
+      "surf_test": {
+        "bytes": 69672,
+        "sha256": "143a06695cf54273b39a74a979c690715b7ba171dd408400084eac3ca78db3da",
+        "crc32": "fd4bed47"
+      },
+      "libredwood.dylib": {
+        "bytes": 74096,
+        "sha256": "99e61bd0fae21d2820ecb5e5a6e8cc5e29dc1e7e2e19d6fbbd68312ce0d66e21",
+        "crc32": "fd391bd7"
+      },
+      "libredwood-sb.dylib": {
+        "bytes": 89184,
+        "sha256": "58a8ecff8d20329eaeb6683d7beaf899fa20081067da6b379f0f1ca4998aed94",
+        "crc32": "5fe47b6f"
+      }
+    },
+    "boot_rc": "# Experiment: hand process 1 over to the real iOS launchd.\nexec /sbin/launchd.ios\n",
+    "jobs_rc": "# Commands run by the launchd job com.redwood.demo (see com.redwood.demo.plist).\n/redwood/bin/hello_dyn started by launchd\n/redwood/bin/svc_test\n/redwood/bin/surf_test\n/bin/ps -A\n/redwood/bin/mg_test\n# the processors: how many, and -- once the system has settled -- whether they work at the same time\n/redwood/bin/cpu_test\n/redwood/bin/cpu_test 240 &\n",
+    "inject": "/redwood/lib/libredwood.dylib backboardd containermanagerd containermanagerd_system\n/redwood/lib/libredwood-sb.dylib SpringBoard\n/redwood/lib/libredwood-media.dylib mediaserverd\n/redwood/lib/libredwood-app.dylib Sileo\n/redwood/lib/libredwood-tweaks.dylib Preferences\n",
+    "apple_binaries_readback_from_apfs": {
+      "/usr/lib/dyld": {
+        "bytes": 922912,
+        "sha256": "a453aa234fc9bd440dc4e55bd2e18f9a7eb2bc3fd7ef319d8714a664bc55bf5c"
+      },
+      "/sbin/launchd.ios": {
+        "bytes": 525088,
+        "sha256": "4c61512d19b9a55a6ddad27e23b88fc5008fbf77d0c0b5e6bdd7c7d90cef3e06"
+      }
+    },
+    "recipe": {
+      "REST": "1",
+      "GL": null,
+      "SHARE": "1",
+      "PREBUILT": null
+    }
+  },
+  "qemu_run": {
+    "cpu": "cortex-a76",
+    "smp": 1,
+    "guest_ram_gb": 7,
+    "guest_budget_seconds": 720,
+    "host_seconds": 765.787030818,
+    "returncode": 0,
+    "actions": [
+      {
+        "host_seconds": 30,
+        "action": "screen",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 90,
+        "action": "screen",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 180,
+        "action": "screen",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 240,
+        "action": "unlock",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 245,
+        "action": "screen",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 300,
+        "action": "screen",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 360,
+        "action": "unlock",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 370,
+        "action": "screen",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 480,
+        "action": "home",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 485,
+        "action": "screen",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 600,
+        "action": "screen",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 660,
+        "action": "stacks",
+        "returncode": 0
+      },
+      {
+        "host_seconds": 680,
+        "action": "screen",
+        "returncode": 0
+      }
+    ],
+    "hardware_observed": false,
+    "chiron_cpu_qualified": false
+  },
+  "loader_overlay": {
+    "base_commit": "8e61187098f2c26c5daee8f9f72b6416aa64b9ab",
+    "patch": {
+      "bytes": 1298,
+      "sha256": "c89f8a1aa81a95cd2d176acd02bd20ccc11eec10f00c2932c8e687aa6460c8e8",
+      "crc32": "c1427504"
+    },
+    "patched_source": {
+      "bytes": 150758,
+      "sha256": "9e8fcbe852f9c2b0b283234630c93ae9231b8236e766f6d34169586f5b5a8025",
+      "crc32": "da8c2be9"
+    },
+    "scope": "fw_cfg DMA completion and framebuffer publication only; kernel/userland unchanged"
+  }
+}

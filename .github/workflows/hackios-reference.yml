@@ -8,6 +8,11 @@ on:
       - 'ci/hackios/**'
       - 'research/hackios-reuse/sources.lock.json'
   workflow_dispatch:
+    inputs:
+      reuse_source_kernel:
+        description: Reuse the hash-pinned source kernel while its artifact is retained
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -24,7 +29,7 @@ jobs:
     env:
       HACKIOS_WORK: ${{ github.workspace }}/.cache/hackios-reference
       HACKIOS_EVIDENCE: ${{ github.workspace }}/dist/hackios-reference
-      HACKIOS_REUSE_KERNEL_DIR: ${{ github.workspace }}/dist/hackios-kernel-reuse
+      HACKIOS_REUSE_KERNEL_DIR: ${{ inputs.reuse_source_kernel && format('{0}/dist/hackios-kernel-reuse', github.workspace) || '' }}
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -59,6 +64,7 @@ jobs:
       - name: Prepare locked source workspace and cross toolchain
         run: python3 ci/hackios/cloud.py prepare --work "$HACKIOS_WORK" --evidence "$HACKIOS_EVIDENCE"
       - name: Reuse the hash-pinned source kernel from the previous reference run
+        if: inputs.reuse_source_kernel
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: hackios-reference-build-39890316014-1

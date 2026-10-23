@@ -5,6 +5,11 @@
 `codex/chiron-source-trace` 与原有未提交内容保持原样；云任务位于独立分支
 `codex/hackios-8796-20f66`。
 
+**最终结果：运行39894576642已通过，人工复核确认SpringBoard首页可见。**
+370秒和680秒的1125×2436原始截图均有应用网格、Dock，状态栏和时钟持续变化。
+原版dyld/cache、launchd PID1、init 36/36、IOSurface 80/80及持续IOMFB交换均有实际证据。
+闭包保持固定8796＋20F66，另有一份1298字节的loader DMA等待补丁；不是未经修改的上游loader复现。
+
 ## 输入与入口
 
 - HackiOS kernel：`8e61187098f2c26c5daee8f9f72b6416aa64b9ab`。
@@ -27,6 +32,7 @@
 | [39884525307](https://github.com/to-mid/ios-party/actions/runs/39884525307) | `6ce83cad006b7bac4967d64e6182a5774bf9b85b` | 内层诊断确认 SETUP 宿主工具的 `hostcompat.h:44` 缺少 `uuid/uuid.h`。未链接内核或运行QEMU；20F66文件再次通过校验 |
 | [39888339946](https://github.com/to-mid/ios-party/actions/runs/39888339946) | `5fe0be57b51bb222692af98b0da6160bb7717136` | 源码内核/loader链接、目标身份、原配方用户态及两份APFS卷构建通过；卷内dyld/launchd读回通过。QEMU在内核执行前因缺少`efi-virtio.rom`退出1，没有截图或来宾运行里程碑 |
 | [39890316014](https://github.com/to-mid/ios-party/actions/runs/39890316014) | `fbe62767fe35bd371501b44512e7053c95c97b85` | 已运行XNU、目标dyld/cache、原版launchd PID1及图形服务；36/36 init、80/80 IOSurface检查通过。1125×2436截图全黑，定位到loader的ramfb DMA状态处理；未取得桌面画面 |
+| [39894576642](https://github.com/to-mid/ios-party/actions/runs/39894576642) | `e0722d9c3760349236de0a51f1a635298eff3853` | 全部云端步骤通过，原生framebuffer恢复；人工复核370秒、680秒截图为SpringBoard首页，完成720秒配置窗口 |
 
 首轮开始于 2026-10-22 14:13 UTC，结束于 14:45 UTC。
 第二轮为 2026-10-23 01:32–01:39 UTC。
@@ -123,13 +129,43 @@ H `ramfb_phone_screen()`的DMA control为非volatile，仅在MMIO写后立刻检
 
 最小修正为`ci/hackios/patches/0001-wait-for-ramfb-dma.patch`：
 control按volatile读取，发布描述符前加屏障，最多等待1秒完成，再发布新SCREEN地址/尺寸。
-不修改XNU、APFS、用户态或图形用户客户端。下一轮复用第四轮已校验的源码内核，
+不修改XNU、APFS、用户态或图形用户客户端。第五轮复用第四轮已校验的源码内核，
 同时锁定其stripped/unstripped哈希及原构建来源，重新编译loader与用户态并重建卷；
 这是复用本项目云端源码构建，不是回退到HackiOS上游prebuilt。
 
-## 待验收
+## 最终复核与产物
 
-动态闭包、PID1与IOSurface已取得实际证据；待验证loader修正后实际framebuffer地址/尺寸一致、
-多时点可见桌面和输入响应。修正后的新运行另行记录。
+最终原始包为`dist/hackios-reference-39894576642/`，本机重算内核/loader/PNG哈希，
+核对dyld/launchd的卷内读回哈希，并用当前完整判定函数回放原始日志与PNG，再次通过。
+上一轮真实黑屏包在修正后的判定函数下仍被拒绝，没有改写其失败结果。
 
-只有取得相应实际观察才更新通过项。当前尚无桌面或MIX2启动成功结论。
+云端`verification.json`的`desktop_boot_qualified`刻意保持false，
+因为自动像素检查不等于人工桌面识别；人工观察与其哈希绑定另记于
+`local-verification.json`，其中桌面通过仅限`qemu_only=true`。
+可提交的精简复核记录为`research/hackios-reuse/cloud-verification-20261023.json`。
+
+| 最终对象 | SHA-256 / 观察 |
+| --- | --- |
+| 内核 | `6b862b18aa099297909a8fdf6fbb6d07124011c29f63fc939765bbf854934b23`，与第四轮相同，来自第四轮源码构建 |
+| 系统APFS | `f781f6111ab3cd84a22dc2b385d2ceb51a706c16c913768e2ff3be26f2f65fa4`，与第四轮相同 |
+| 小APFS | `586ebac488e5a7d1c5e07e85749c4274941be5e4f859427c0889209c4c8b2c98`，重建时motd改变；所记录六份程序/注入库与第四轮逐字节一致 |
+| loader | `534efb4486b3758cc39a6e74a8ca01d7caf1149f46f59a7fb671f6ce0784f6bd`，68608字节 |
+| loader补丁 | `c89f8a1aa81a95cd2d176acd02bd20ccc11eec10f00c2932c8e687aa6460c8e8` |
+| 显示交接 | loader `1125×2436 @ 0x1fb9eb000`；IOMFB `1125×2436 on 1125×2436, rowBytes=4500` |
+| QEMU | 正常返回0；765.8宿主秒；末尾仍有SpringBoard PID7、backboardd PID10、launchd.ios PID1的CPU统计 |
+| 界面 | `screens/t0370.png`与`t0680.png`为可见首页，时间/时钟改变；黑色壁纸、Weather/Calendar小组件为空白 |
+
+本轮init实际打印`memory 4192 MB, page size 16384, 1 cpu`，
+APFS记录的单次pagein为32768字节、VM页16384字节。
+这是H原组合发布的VM/用户页策略，不是chiron当前native4K ABI通过；
+本轮没有独立取回TCR寄存器读数，不能以该打印替代硬件translation granule测量。
+
+QMP操作均被接受，来宾virtio输入有记录；本轮没有逐项验收应用启动、完整导航、
+网络、音频或安全服务，也没有MIX2手机操作。不能将此结果记为chiron CPU或实机通过。
+启动前的`vgabios-ramfb.bin`缺失提示仍存在，但本轮可见桌面，未把该提示当作无画面的根因。
+
+复现入口保留`.github/workflows/hackios-reference.yml`和`ci/hackios/`。
+最终配置默认重新从固定源码编译完整内核；手动dispatch的`reuse_source_kernel=true`
+才读取第四轮哈希锁定内核。复用仅限原artifact仍在保留期（7天）时，过期可使用默认全量路径，
+不会悄悄回退到上游prebuilt。全量路径已在第四轮执行，精确哈希复用路径已在第五轮执行；
+最后的可选入口调整没有改变本报告所绑定的`e0722d9c...`运行。
