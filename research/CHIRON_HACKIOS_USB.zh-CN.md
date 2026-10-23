@@ -264,3 +264,75 @@ loader 源码哈希与 HK3 相同；重新链接产生的二进制只在 COFF
 `out/chiron-port/package-hk4-39940010772.log`。
 精简复核记录为 `research/hackios-reuse/phone-usb-hk4-20261023.json`。
 本轮未操作手机，HK4 的实际 USB 枚举、内核执行和桌面仍待实机验证。
+
+## HK4 实机结果与 HK5
+
+用户照片 `IMG_20261023_184637.jpg` 确认请求启动外设后，实际配置仍为：
+
+```text
+USB cfg 0 revision 10003 core 1 mode 10000
+USB cfg 1 revision 10003 core 0 mode 1
+matching peripheral controllers: 0
+```
+
+core 0 的实际模式 `1` 是 XHCI host，`0x10000` 是无效模式。
+HK4 没有找到 mode 4 的外设控制器，所以未调用 DWC3 Supported。
+载荷、loader 和 XNU 仍未启动。
+
+固定原厂 UsbConfigDxe 的 `0x4b2c–0x4b88` 会在静态配置启用时，
+将调用者要求的模式替换为静态模式，再执行模式相等判断。
+因此请求 peripheral 后仍返回成功且实际处于 host，符合该强制策略路径。
+本机尚未直接读取运行中私有静态标志，不能把代码分支存在当作分支追踪。
+
+另一个公开 API ConfigUsb 的 wrapper 为 RVA `0x1514`，实现为 `0x3990`。
+它直接按传入的模式初始化原厂 USB core interface：
+`0x3acc` 比较 mode 4，`0x3ae0` 调用 InitDevice；
+该路径不执行上述 StartController 的静态模式替换。
+原厂 DWC3 的 Start 本身就通过这个公开 API 配置控制器。
+
+HK5 在确认只有默认端口的 host 配置、没有可绑定外设句柄时：
+
+- 核对原厂 USB Config 模块文件 GUID、内存镜像尺寸 `0x13000`、
+  revision `0x10003` 及三项公开回调的 RVA，拒绝不匹配的实例。
+- 将完整公开 USB Config 表复制到 Boot Services 内存，
+  保留原厂回调及尾部 VBUS 方法，只对新副本设置默认 core 和 mode 4。
+  完整结构大小 `0xa0` 和 core/mode 偏移都有编译期检查。
+- 经厂商 USB Init 的 StopController 停止当前 host 栈。
+  停止失败时释放尚未注册的副本，并停在失败画面。
+- 注册本次启动专用的 USB Config 句柄，让原厂 DWC3 执行
+  Supported/ConnectController，并在同一新句柄检查 USB Function IO。
+- 注册后的公开表保持驻留。副本所有回调均指向原厂常驻模块，
+  因此入口返回时不会留下指向入口代码或栈的悬空回调。
+
+此方案没有改变原厂私有静态策略字段，也没有写 NVRAM；
+不修改原固件或内核指令。实际硬件角色切换仍待手机验证。
+
+新增 `tests/test_chiron_usb_peripheral.py`：
+直接提取生产代码中的 CreatePeripheralController 函数及协议类型，
+使用宿主 C 编译器和 EFI doubles 运行 12 个情景。
+3 项测试通过，覆盖身份不符、分配失败、停止 host 失败、注册失败、
+驱动支持/连接失败、返回成功但底层协议缺失，以及真正取得协议的路径。
+还核对停止 host 修改原对象时副本仍保持外设模式，
+注册后的表不会被提前释放。这些检查不是 USB 硬件模拟或实机资格。
+
+HK5 源码提交 `824d1768e84a7f3e8ff0990c8738435103192d42`，
+云端运行 `39942820704` 已全部通过，本地独立复核通过。
+
+| HK5 对象 | 字节数 / SHA-256 |
+| --- | --- |
+| 启动镜像 | 26,697,728 / `0c1a5835d1a696baef3f71c1e070316cb8fa3bb8517de90c4ce57df6f18bf7ac` |
+| EFI 入口 | 17,920 / `379c28b883f2091d99a10fe90f366c0c50841c670041a34cbe8219b79352a083` |
+| 重新链接的 loader | 69,632 / `b18cb9242eb4ff5f042595573e6cb71859c85035ae937cb5629827efb9ebb932` |
+
+容器 SHA-256、legacy SHA-1 和新入口的 FAT 读回通过。
+固件、末尾 DTB、载荷与 HK4 逐字节一致，系统卷清单相同。
+loader 源码哈希相同，二进制仍仅在 COFF 时间戳有差异。
+新入口包含 host 停止、固定 API 身份核对和专用外设句柄的阶段输出。
+
+交付目录为 `dist/mix2-hackios/`：
+`MIX2-HackiOS-HK5.img`、`manifest-hk5.json`、
+`local-verification-hk5.json`、`START-HK5.zh-CN.md`。
+原始包为 `dist/mix2-hackios-hk5-build/`，构建日志为
+`out/chiron-port/package-hk5-39942820704.log`。
+精简复核记录为 `research/hackios-reuse/phone-usb-hk5-20261023.json`。
+本轮未操作手机，实际 USB 枚举和后续 XNU 执行仍待用户测试。

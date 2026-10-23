@@ -1,0 +1,23 @@
+{
+  "image_sha256": "0c1a5835d1a696baef3f71c1e070316cb8fa3bb8517de90c4ce57df6f18bf7ac",
+  "cloud_run_id": "39942820704",
+  "cloud_project_sha": "824d1768e84a7f3e8ff0990c8738435103192d42",
+  "legacy_sha1_valid": true,
+  "firmware_bytes_match_hk4": true,
+  "trailing_bytes_match_hk4": true,
+  "payload_bytes_match_hk4": true,
+  "loader_diff_only_coff_timestamp": true,
+  "loader_timestamp_normalized_sha256": "e7b378d1878c8a93bd00c3d584190a3c0708b900b1bb8fedf02c5cf3442c8a1f",
+  "loader_source_hash_matches_hk4": true,
+  "entry_readback_verified": true,
+  "dedicated_peripheral_and_host_stop_diagnostics_in_entry": true,
+  "system_root_manifest_matches_hk4": true,
+  "peripheral_host_tests": {
+    "tests": 3,
+    "scenarios": 12,
+    "passed": true,
+    "scope": "host C and EFI doubles; no USB hardware simulation"
+  },
+  "hardware_observed": false,
+  "hardware_boot_qualified": false
+}

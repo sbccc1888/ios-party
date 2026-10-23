@@ -40,6 +40,17 @@
       "0x88",
       "0x8c"
     ],
+    "config_usb_wrapper_rva": "0x1514",
+    "config_usb_implementation_rva": "0x3990",
+    "config_usb_device_mode_compare_rva": "0x3acc",
+    "config_usb_init_device_call_rva": "0x3ae0",
+    "static_mode_override_load_rva": "0x4b88",
+    "runtime_api_identity_rvas": {
+      "GetCoreBaseAddr": "0x1440",
+      "ConfigUsb": "0x1514",
+      "GetSSUsbFnConfig": "0x1750"
+    },
+    "complete_public_config_size": "0xa0",
     "scope": "ordinary LLVM static disassembly; no REA Evidence and no runtime branch observation"
   }
 }
