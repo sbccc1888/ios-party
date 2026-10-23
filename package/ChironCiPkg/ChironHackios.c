@@ -2,6 +2,7 @@
 #include <Uefi.h>
 #include <Guid/FileInfo.h>
 #include <Protocol/BlockIo.h>
+#include <Protocol/FirmwareVolume2.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DevicePathLib.h>
@@ -13,66 +14,73 @@
 #define PAYLOAD_BASE 0xF0000000ULL
 #define PAYLOAD_MAX  0x03F00000ULL
 
-// Same ABI as EmbeddedPkg's fixed AndroidFastbootTransport.h.
-typedef struct {
-  EFI_STATUS (*Start)(EFI_EVENT);
-  EFI_STATUS (*Stop)(VOID);
-  EFI_STATUS (*Send)(UINTN, CONST VOID *, EFI_EVENT *);
-  EFI_STATUS (*Receive)(UINTN *, VOID **);
-} FASTBOOT_TRANSPORT;
+STATIC EFI_GUID mQcomUsbGuid =
+  {0xd9d9ce48,0x44b8,0x4f49,{0x8e,0x3e,0x2a,0x3b,0x92,0x7d,0xc6,0xc1}};
+STATIC EFI_GUID mUsbDeviceFileGuid =
+  {0x3299a266,0x15f0,0x4346,{0x83,0x18,0x71,0x63,0x36,0x73,0x6d,0x3e}};
 
-typedef struct {
-  UINT64 Revision;
-  EFI_STATUS (EFIAPI *Start)(VOID);
-  EFI_STATUS (EFIAPI *Receive)(UINTN *, VOID **);
-  EFI_STATUS (EFIAPI *Send)(UINTN, CONST VOID *);
-} CHIRON_USB_TRANSPORT;
-
-STATIC EFI_GUID mFastbootGuid =
-  {0x74bd9fe0,0x8902,0x11e3,{0xb9,0xd3,0xf7,0x22,0x38,0xfc,0x9a,0x31}};
-STATIC EFI_GUID mChironUsbGuid =
-  {0x46037394,0xa01b,0x41fa,{0x83,0xcc,0xd8,0x45,0xd9,0x1c,0xae,0x70}};
-STATIC FASTBOOT_TRANSPORT *mFastboot;
-STATIC EFI_EVENT mReceiveEvent;
-STATIC EFI_EVENT mFatalEvent;
-
-STATIC EFI_STATUS EFIAPI
-UsbStart(VOID)
+STATIC EFI_STATUS
+PrepareUsb(EFI_HANDLE Parent)
 {
+  EFI_HANDLE *Handles;
+  EFI_HANDLE Image;
+  UINTN Count;
+  UINTN Index;
+  VOID *Usb;
   EFI_STATUS Status;
-  Status = gBS->LocateProtocol(&mFastbootGuid, NULL, (VOID **)&mFastboot);
-  if (EFI_ERROR(Status)) {
-    Print(L"Existing EDK2 Fastboot transport unavailable: %r\n", Status);
-    return Status;
+  EFI_FIRMWARE_VOLUME2_PROTOCOL *Fv;
+  EFI_FV_FILETYPE Type;
+  EFI_FV_FILE_ATTRIBUTES Attributes;
+  UINT32 Authentication;
+  UINTN Size;
+  MEDIA_FW_VOL_FILEPATH_DEVICE_PATH Node;
+  EFI_DEVICE_PATH_PROTOCOL *Path;
+  EFI_DEVICE_PATH_PROTOCOL *Base;
+
+  Status = gBS->LocateProtocol(&mQcomUsbGuid, NULL, &Usb);
+  Print(L"HK2: Qualcomm USB protocol: %r\n", Status);
+  if (!EFI_ERROR(Status)) return EFI_SUCCESS;
+  if (Status != EFI_NOT_FOUND) return Status;
+
+  Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiFirmwareVolume2ProtocolGuid,
+                                  NULL, &Count, &Handles);
+  if (EFI_ERROR(Status)) return Status;
+  Status = EFI_NOT_FOUND;
+  for (Index = 0; Index < Count; Index++) {
+    Status = gBS->HandleProtocol(Handles[Index], &gEfiFirmwareVolume2ProtocolGuid,
+                                (VOID **)&Fv);
+    if (EFI_ERROR(Status)) continue;
+    Size = 0;
+    Status = Fv->ReadFile(Fv, &mUsbDeviceFileGuid, NULL, &Size, &Type,
+                         &Attributes, &Authentication);
+    if (EFI_ERROR(Status)) continue;
+    Base = DevicePathFromHandle(Handles[Index]);
+    if (Base == NULL) { Status = EFI_NOT_FOUND; continue; }
+    EfiInitializeFwVolDevicepathNode(&Node, &mUsbDeviceFileGuid);
+    Path = AppendDevicePathNode(Base, (EFI_DEVICE_PATH_PROTOCOL *)&Node);
+    if (Path == NULL) { Status = EFI_OUT_OF_RESOURCES; break; }
+    Print(L"HK2: loading Qualcomm UsbDeviceDxe from firmware\n");
+    Status = gBS->LoadImage(FALSE, Parent, Path, NULL, 0, &Image);
+    FreePool(Path);
+    Print(L"HK2: load UsbDeviceDxe: %r\n", Status);
+    if (EFI_ERROR(Status)) break;
+    Status = gBS->StartImage(Image, NULL, NULL);
+    Print(L"HK2: start UsbDeviceDxe: %r\n", Status);
+    if (EFI_ERROR(Status)) break;
+    Status = gBS->LocateProtocol(&mQcomUsbGuid, NULL, &Usb);
+    Print(L"HK2: Qualcomm USB protocol after start: %r\n", Status);
+    break;
   }
-  Status = gBS->CreateEvent(0, TPL_APPLICATION, NULL, NULL, &mReceiveEvent);
-  if (EFI_ERROR(Status)) return Status;
-  Status = gBS->CreateEvent(0, TPL_APPLICATION, NULL, NULL, &mFatalEvent);
-  if (EFI_ERROR(Status)) return Status;
-  return mFastboot->Start(mReceiveEvent);
+  FreePool(Handles);
+  return Status;
 }
-
-STATIC EFI_STATUS EFIAPI
-UsbReceive(UINTN *Size, VOID **Buffer)
-{
-  if (gBS->CheckEvent(mFatalEvent) == EFI_SUCCESS) return EFI_DEVICE_ERROR;
-  return mFastboot->Receive(Size, Buffer);
-}
-
-STATIC EFI_STATUS EFIAPI
-UsbSend(UINTN Size, CONST VOID *Buffer)
-{
-  return mFastboot->Send(Size, Buffer, &mFatalEvent);
-}
-
-STATIC CHIRON_USB_TRANSPORT mUsb = {1, UsbStart, UsbReceive, UsbSend};
 
 STATIC EFI_STATUS
 ShowFailure(CONST CHAR16 *Stage, EFI_STATUS Status)
 {
   EFI_INPUT_KEY Key;
   UINTN Index;
-  Print(L"\nHK1 FAIL %s\n%r  [%016lx]\n", Stage, Status, (UINT64)Status);
+  Print(L"\nHK2 FAIL %s\n%r  [%016lx]\n", Stage, Status, (UINT64)Status);
   Print(L"Take a photo of this screen. Press a key to return.\n");
   if (gST->ConIn != NULL && gST->ConIn->WaitForKey != NULL) {
     while (gST->ConIn->ReadKeyStroke(gST->ConIn, &Key) == EFI_SUCCESS) { }
@@ -97,7 +105,7 @@ ReadPayload(EFI_FILE_PROTOCOL *Root)
 
   Status = Root->Open(Root, &File, L"\\EFI\\HackiOS\\payload.bin", EFI_FILE_MODE_READ, 0);
   if (EFI_ERROR(Status)) return Status;
-  Print(L"HK1: payload file found\n");
+  Print(L"HK2: payload file found\n");
   Status = File->GetInfo(File, &gEfiFileInfoGuid, &InfoSize, NULL);
   if (Status != EFI_BUFFER_TOO_SMALL || InfoSize > 4096) {
     Status = EFI_COMPROMISED_DATA;
@@ -114,7 +122,7 @@ ReadPayload(EFI_FILE_PROTOCOL *Root)
   Status = gBS->AllocatePages(AllocateAddress, EfiLoaderData,
                              EFI_SIZE_TO_PAGES(0x04000000), &Address);
   if (EFI_ERROR(Status)) {
-    Print(L"HK1: reserve 64 MiB at %lx failed: %r\n", Address, Status);
+    Print(L"HK2: reserve 64 MiB at %lx failed: %r\n", Address, Status);
     goto Done;
   }
   Bytes = (UINTN)Info->FileSize;
@@ -142,11 +150,11 @@ StartLoader(EFI_HANDLE Parent, EFI_HANDLE Volume)
 
   Path = FileDevicePath(Volume, L"\\EFI\\HackiOS\\loader.efi");
   if (Path == NULL) return ShowFailure(L"LOADER PATH", EFI_OUT_OF_RESOURCES);
-  Print(L"HK1: loading loader from RAM filesystem\n");
+  Print(L"HK2: loading loader from RAM filesystem\n");
   Status = gBS->LoadImage(FALSE, Parent, Path, NULL, 0, &Image);
   FreePool(Path);
   if (EFI_ERROR(Status)) return ShowFailure(L"LOAD LOADER", Status);
-  Print(L"HK1: starting USB loader; UEFI remains resident\n");
+  Print(L"HK2: starting native Qualcomm USB loader; UEFI remains resident\n");
   Status = gBS->StartImage(Image, NULL, NULL);
   return ShowFailure(L"START LOADER", Status);
 }
@@ -157,14 +165,12 @@ UefiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
   EFI_HANDLE *Handles;
   UINTN Count;
   EFI_STATUS Status;
-  EFI_HANDLE UsbHandle = NULL;
   UINTN Index;
 
   (VOID)SystemTable;
-  Print(L"\nHK1 EFI ENTRY: chiron / 8796 / 20F66\n");
-  Status = gBS->InstallProtocolInterface(&UsbHandle, &mChironUsbGuid,
-                                        EFI_NATIVE_INTERFACE, &mUsb);
-  if (EFI_ERROR(Status)) return ShowFailure(L"INSTALL USB PROXY", Status);
+  Print(L"\nHK2 EFI ENTRY: chiron / 8796 / 20F66\n");
+  Status = PrepareUsb(ImageHandle);
+  if (EFI_ERROR(Status)) return ShowFailure(L"PREPARE QUALCOMM USB", Status);
   Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiSimpleFileSystemProtocolGuid,
                                   NULL, &Count, &Handles);
   if (EFI_ERROR(Status)) return ShowFailure(L"ENUM FILESYSTEMS", Status);

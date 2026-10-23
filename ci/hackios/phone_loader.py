@@ -28,7 +28,7 @@ def main():
     shutil.copy2(args.work / "xnuloader/loader.efi", args.phone / "loader.efi")
     inputs = json.loads((args.phone / "inputs.json").read_text())
     inputs["loader"] = cloud.digest(args.phone / "loader.efi")
-    inputs["usb_backend"] = "existing EDK2 AndroidFastbootTransport, via bootstrap proxy"
+    inputs["usb_backend"] = "native Qualcomm EFI_USB_DEVICE_PROTOCOL; upstream polled USB"
     inputs["usb_transport_hardware_qualified"] = False
     inputs["phone_loader_source_sha256"] = cloud.digest(args.work / "xnuloader/loader.c")["sha256"]
     cloud.save(args.phone / "inputs.json", inputs)

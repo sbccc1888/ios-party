@@ -52,7 +52,7 @@ jobs:
           done
           gh run download "$PORT_RUN" --repo "$GITHUB_REPOSITORY" \
             --name "chiron-hackios-$PORT_RUN" --dir dist/chiron-runtime
-      - name: Build the phone USB loader against the existing firmware transport
+      - name: Build the phone loader with native Qualcomm USB
         run: |
           python3 ci/hackios/phone_loader.py --work "$RUNNER_TEMP/chiron-phone-loader" \
             --phone dist/chiron-runtime/phone

@@ -17,11 +17,13 @@
   UefiBootServicesTableLib
   UefiLib
   BaseMemoryLib
+  DevicePathLib
   MemoryAllocationLib
 
 [Protocols]
   gEfiSimpleFileSystemProtocolGuid
   gEfiBlockIoProtocolGuid
+  gEfiFirmwareVolume2ProtocolGuid
 
 [Guids]
   gEfiFileInfoGuid
