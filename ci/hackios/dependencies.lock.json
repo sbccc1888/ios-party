@@ -5,6 +5,12 @@
     "commit": "0222fd5413cf4b9af096f37b4621afa2688572f7",
     "directory": "iPhoneOS16.5.sdk"
   },
+  "source_kernel_reference": {
+    "run_id": "39890316014",
+    "run_attempt": "1",
+    "sha256": "6b862b18aa099297909a8fdf6fbb6d07124011c29f63fc939765bbf854934b23",
+    "unstripped_sha256": "17a1bfda49c5bd71ee6f89eedfa4f26c8a57a2bd9e023fc0d3f71fbc5b4e9419"
+  },
   "toolchain": {
     "url": "https://github.com/L1ghtmann/llvm-project/releases/download/test-210562a/iOSToolchain-x86_64.tar.xz",
     "release_id": 120153181,

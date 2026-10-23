@@ -124,6 +124,15 @@ def prepare(work, evidence):
         raise RuntimeError("toolchain did not contain the expected cctools linker")
     save(evidence / "sources.json", sources)
     save(evidence / "dependencies.json", {"locked": deps, "toolchain_download": toolchain})
+    loader_patch = ROOT / "ci/hackios/patches/0001-wait-for-ramfb-dma.patch"
+    command(["git", "-C", kernel, "apply", "--check", loader_patch])
+    command(["git", "-C", kernel, "apply", loader_patch])
+    shutil.copy2(loader_patch, evidence / loader_patch.name)
+    save(evidence / "loader-overlay.json", {
+        "base_commit": sources["kernel"]["commit"], "patch": digest(loader_patch),
+        "patched_source": digest(kernel / "xnuloader/loader.c"),
+        "scope": "fw_cfg DMA completion and framebuffer publication only; kernel/userland unchanged",
+    })
     save(evidence / "runner.json", {
         "run_id": os.environ["GITHUB_RUN_ID"], "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
         "project_sha": os.environ["GITHUB_SHA"], "system": output(["uname", "-a"]),
@@ -220,6 +229,35 @@ def build_and_fetch(work, evidence):
                 print(f"FAILED {name}: {error}", flush=True)
         if failures:
             raise RuntimeError("; ".join(failures))
+
+
+def reuse_kernel(work, evidence):
+    original = Path(os.environ["HACKIOS_REUSE_KERNEL_DIR"])
+    expected = json.loads(DEPS.read_text())["source_kernel_reference"]
+    sources = json.loads(SOURCES.read_text())
+    recorded_sources = json.loads((original / "sources.json").read_text())
+    if recorded_sources != sources:
+        raise RuntimeError("source-kernel artifact source lock differs from the current reference")
+    runner = json.loads((original / "runner.json").read_text())
+    if runner["run_id"] != expected["run_id"] or runner["run_attempt"] != expected["run_attempt"]:
+        raise RuntimeError("wrong source-kernel build run")
+    kernel = original / "kernel.development.hackios"
+    unstripped = original / "kernel.development.hackios.unstripped"
+    if digest(kernel)["sha256"] != expected["sha256"]:
+        raise RuntimeError("reused source kernel hash mismatch")
+    if digest(unstripped)["sha256"] != expected["unstripped_sha256"]:
+        raise RuntimeError("reused source kernel symbols hash mismatch")
+    target = work / "kernel/xnu-src/xnu-8796.121.2/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        raise RuntimeError("refusing to replace a kernel already built in this workspace")
+    shutil.copy2(kernel, target)
+    shutil.copy2(unstripped, target.with_name(target.name + ".unstripped"))
+    save(evidence / "kernel-provenance.json", {
+        "source_build_run": expected["run_id"], "source_build_attempt": expected["run_attempt"],
+        "source_build_project_sha": runner["project_sha"], "kernel": digest(kernel),
+        "rebuilt_in_this_run": False, "upstream_prebuilt_used": False,
+    })
 
 
 def images(work, evidence):
@@ -325,7 +363,7 @@ def summarize(work, evidence):
         "init_checks": r"=== \d+ checks, 0 failed ===",
         "surface_checks": r"surf_test: \d+ checks, 0 failed",
         "apple_pid1": r"(?m)^\s*1\s+.*(?:/sbin/launchd\.ios|launchd(?:\.ios)?\s*$)|launchd(?:\.ios)?\[1\]",
-        "springboard": r"(?m)^\s*\d+\s+.*(?:/Applications/SpringBoard\.app/SpringBoard|SpringBoard\s*$)",
+        "springboard": r"(?m)^\s*\d+\s+.*(?:/(?:System/Library/CoreServices|Applications)/SpringBoard\.app/)|top:.*SpringBoard\[\d+\]",
         "backboardd": r"(?m)^\s*\d+\s+.*(?:/usr/libexec/backboardd|backboardd\s*$)",
         "display_swaps": r"MiniIOMobileFramebuffer: swap \d+.*surfaces",
     }
@@ -343,7 +381,11 @@ def summarize(work, evidence):
             record["mean_pixel_difference"] = ImageStat.Stat(ImageChops.difference(image, previous)).mean
         previous = image
         screenshots.append(record)
-    runtime = all(matches.values()) and any(s["nonuniform"] for s in screenshots)
+    display_frames = [
+        frame for frame in screenshots
+        if frame["size"] == [1125, 2436] and frame["nonuniform"]
+    ]
+    runtime = all(matches.values()) and len(display_frames) >= 2
     save(evidence / "verification.json", {
         "schema": "hackios-8796-20F66-cloud-v1",
         "runtime_closure_observed": bool(runtime), "milestone_matches": matches,
@@ -359,7 +401,7 @@ def summarize(work, evidence):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("prepare", "build-fetch", "images", "qemu", "summarize"))
+    parser.add_argument("stage", choices=("prepare", "build-fetch", "reuse-kernel", "images", "qemu", "summarize"))
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     args = parser.parse_args()
@@ -368,7 +410,7 @@ def main():
     args.evidence.mkdir(parents=True, exist_ok=True)
     try:
         require_runner()
-        {"prepare": prepare, "build-fetch": build_and_fetch, "images": images,
+        {"prepare": prepare, "build-fetch": build_and_fetch, "reuse-kernel": reuse_kernel, "images": images,
          "qemu": qemu, "summarize": summarize}[args.stage](args.work, args.evidence)
     except Exception as error:
         save(args.evidence / f"failure-{args.stage}.json", {"stage": args.stage, "error": str(error)})

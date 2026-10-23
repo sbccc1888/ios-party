@@ -26,12 +26,17 @@ K=xnu-src/xnu-8796.121.2/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bc
 test ! -e "$K"
 BUILD_START=$(date +%s)
 BUILD_RC=0
-bash xnu-build.sh -j2 -k || BUILD_RC=$?
-# Upstream's export-list checks can fail after linking. Require fresh executables,
-# reject unresolved symbols, and retain the original make result and complete log.
+if [ -n "${HACKIOS_REUSE_KERNEL_DIR:-}" ]; then
+  python3 "$GITHUB_WORKSPACE/ci/hackios/cloud.py" reuse-kernel --work "$WORK" --evidence "$EVIDENCE"
+  BUILD_RC=$(cat "$HACKIOS_REUSE_KERNEL_DIR/kernel-make-exit.txt")
+else
+  bash xnu-build.sh -j2 -k || BUILD_RC=$?
+  test "$(stat -c %Y "$K")" -ge "$BUILD_START"
+fi
+# Upstream's export checks can fail after linking. Require a fresh link or the
+# hash-pinned source build above, and reject unresolved symbols in either case.
 test -s "$K"
 test -s "$K.unstripped"
-test "$(stat -c %Y "$K")" -ge "$BUILD_START"
 source xnu-env.sh
 nm -u "$K.unstripped" > "$EVIDENCE/kernel-undefined.txt"
 test ! -s "$EVIDENCE/kernel-undefined.txt"
@@ -41,4 +46,4 @@ cp "$K" "$EVIDENCE/kernel.development.hackios"
 cp "$K.unstripped" "$EVIDENCE/kernel.development.hackios.unstripped"
 cp xnuloader/loader.efi "$EVIDENCE/loader.efi"
 printf '%s\n' "$BUILD_RC" > "$EVIDENCE/kernel-make-exit.txt"
-printf 'Fresh source kernel linked; make exit=%s\n' "$BUILD_RC"
+printf 'Verified source kernel ready; original make exit=%s\n' "$BUILD_RC"

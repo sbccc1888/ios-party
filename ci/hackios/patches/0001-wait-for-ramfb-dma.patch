@@ -1,0 +1,34 @@
+diff --git a/xnuloader/loader.c b/xnuloader/loader.c
+--- a/xnuloader/loader.c
++++ b/xnuloader/loader.c
+@@ -3875,7 +3875,8 @@ ramfb_phone_screen(void)
+ 		uint32_t fourcc, flags, width, height, stride;
+ 	} __attribute__((packed)) cfg;
+ 	static struct {
+-		uint32_t control, length;
++		volatile uint32_t control;
++		uint32_t length;
+ 		uint64_t address;
+ 	} dma;
+ 	struct {
+@@ -3906,9 +3907,20 @@ ramfb_phone_screen(void)
+ 	dma.control = be32(select << 16 | FW_CFG_DMA_SELECT | FW_CFG_DMA_WRITE);
+ 	dma.length = be32(sizeof(cfg));
+ 	dma.address = __builtin_bswap64((uint64_t)(uintptr_t)&cfg);
++	__asm__ volatile("dsb sy" ::: "memory");
+ 	*(volatile uint64_t *)(FW_CFG_BASE + 16) = __builtin_bswap64((uint64_t)(uintptr_t)&dma);
++	/* The device writes control: reload it, even on synchronous implementations. */
++	uint64_t deadline = READ_SYSREG(CNTVCT_EL0) + READ_SYSREG(CNTFRQ_EL0);
++	while ((be32(dma.control) & ~1u) != 0) {
++		if (READ_SYSREG(CNTVCT_EL0) >= deadline) {
++			print("ramfb: DMA timed out, control %x\n", (uint64_t)be32(dma.control));
++			return;
++		}
++		__asm__ volatile("yield" ::: "memory");
++	}
++	__asm__ volatile("dmb ishld" ::: "memory");
+ 	if (dma.control != 0) {
+ 		print("ramfb: control %x after the request\n", (uint64_t)be32(dma.control));
+ 		return;
+ 	}
+ 	SCREEN.base = fb;
