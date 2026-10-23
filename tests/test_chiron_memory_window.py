@@ -168,5 +168,103 @@ int main(void) {
             subprocess.run([folder / "heap"], check=True)
 
 
+class AllocationFlowTests(unittest.TestCase):
+    def test_real_claim_function_checks_free_memory_and_rechecks_allocator_ownership(self):
+        if not shutil.which("cc"):
+            self.skipTest("host C compiler unavailable")
+        source = (ROOT / "ci/hackios/memory_loader.inc").read_text()
+        prelude = r"""
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+#include <assert.h>
+#include <stdlib.h>
+#define EFIAPI
+#define EFI_ERROR(x) (((x) >> 63) != 0)
+#define MAX_MEM_SIZE UINT64_C(0xbc000000)
+typedef uint64_t efi_status;
+typedef struct { uint32_t a; uint16_t b,c; uint8_t d[8]; } efi_guid;
+typedef struct { uint32_t type,pad; uint64_t phys_start,virt_start,pages,attribute; } efi_memory_descriptor;
+enum { EfiLoaderData=2, EfiConventionalMemory=7, AllocateAddress=2 };
+struct payload_info { uint64_t forced_base; };
+typedef struct {
+ efi_status (*locate_protocol)(const efi_guid *, void *, void **);
+ efi_status (*get_memory_map)(uint64_t *, void *, uint64_t *, uint64_t *, uint32_t *);
+ efi_status (*allocate_pages)(int, int, uint64_t, uint64_t *);
+ efi_status (*free_pages)(uint64_t, uint64_t);
+} boot_services;
+static boot_services *BS;
+static uint64_t win_base,win_size;
+static void print(const char *format, ...) { (void)format; }
+"""
+        tail = r"""
+static int scenario, maps, allocations, frees;
+static uint64_t returned_address;
+static struct chiron_memory_window window;
+static efi_status locate(const efi_guid *guid, void *registration, void **out) {
+ (void)registration; assert(guid->a==0x71c9274c);
+ if (scenario==1) return UINT64_C(0x800000000000000e);
+ *out=&window; return 0;
+}
+static efi_status map(uint64_t *size, void *buffer, uint64_t *key, uint64_t *stride, uint32_t *version) {
+ maps++; assert(*size>=96); *key=123; *stride=48; *version=1;
+ if (scenario==6 && maps==2) return UINT64_C(0x8000000000000007);
+ efi_memory_descriptor d={0};
+ d.type=maps==1 ? EfiConventionalMemory : EfiLoaderData;
+ if (scenario==3 && maps==1) d.type=4;
+ if (scenario==5 && maps==2) d.type=EfiConventionalMemory;
+ if (scenario==10 && maps==1) d.type=EfiLoaderData;
+ d.phys_start=0x100000000ULL; d.pages=0xbc000000ULL/4096;
+ if (scenario==9 && maps==1) d.attribute=1ULL<<63;
+ memset(buffer,0,96);
+ if (scenario==8 && maps==1) {
+  d.pages=0x6e000000ULL/4096; memcpy(buffer,&d,sizeof(d));
+  d.phys_start=0x170000000ULL; d.pages=0x4c000000ULL/4096;
+  memcpy((uint8_t *)buffer+48,&d,sizeof(d)); *size=96;
+ } else { memcpy(buffer,&d,sizeof(d)); *size=48; }
+ return 0;
+}
+static efi_status allocate(int type,int memory_type,uint64_t pages,uint64_t *address) {
+ assert(type==AllocateAddress && memory_type==EfiLoaderData);
+ assert(pages==0xbc000000ULL/4096 && *address==0x100000000ULL && maps==1);
+ allocations++;
+ if (scenario==4) return UINT64_C(0x8000000000000009);
+ if (scenario==7) *address+=0x2000000;
+ returned_address=*address; return 0;
+}
+static efi_status release(uint64_t address,uint64_t pages) {
+ assert(allocations==1 && address==returned_address && pages==0xbc000000ULL/4096);
+ frees++; return 0;
+}
+int main(void) {
+ boot_services services={locate,map,allocate,release}; BS=&services;
+ struct payload_info payload={0};
+ for (scenario=0;scenario<=10;scenario++) {
+  maps=allocations=frees=0; win_base=win_size=returned_address=0;
+  window=(struct chiron_memory_window){0x434857494e444f57ULL,1,0x100000000ULL,0xbc000000ULL,0,6};
+  if (scenario==2) window.status=1;
+  int result=chiron_preclaimed_window(&payload);
+  assert(result==(scenario==0));
+  if (scenario==0) assert(allocations==1 && maps==2 && frees==0 && win_size==0xbc000000ULL);
+  else assert(win_size==0 && win_base==0);
+  if (scenario==1 || scenario==2 || scenario==3 || scenario==8 || scenario==9 || scenario==10)
+   assert(allocations==0 && frees==0);
+  if (scenario==4) assert(allocations==1 && frees==0);
+  if (scenario==5 || scenario==6 || scenario==7) assert(allocations==1 && frees==1);
+ }
+ return 0;
+}
+"""
+        with tempfile.TemporaryDirectory(prefix="chiron-claim-check-") as directory:
+            folder = Path(directory)
+            (folder / "claim.c").write_text(prelude + source + tail)
+            result = subprocess.run(
+                ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
+                 folder / "claim.c", "-o", folder / "claim"],
+                capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            subprocess.run([folder / "claim"], check=True)
+
+
 if __name__ == "__main__":
     unittest.main()

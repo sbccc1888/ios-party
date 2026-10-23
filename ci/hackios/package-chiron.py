@@ -94,7 +94,7 @@ default = "chiron-hackios"
 autoload = false
 [[entry]]
 id = "chiron-hackios"
-title = "HK6b"
+title = "HK6c"
 type = "efi"
 path = "/EFI/HackiOS/ChironHackios.efi"
 [[entry]]

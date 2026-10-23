@@ -35,7 +35,7 @@ def main():
     inputs["phone_loader_source_sha256"] = cloud.digest(args.work / "xnuloader/loader.c")["sha256"]
     inputs["memory_loader_source_sha256"] = cloud.digest(
         args.work / "xnuloader/chiron_memory_window.inc")["sha256"]
-    inputs["memory_policy"] = "PEI-owned high bank, protocol and memory-map verified"
+    inputs["memory_policy"] = "PEI-described high bank; free-map checked, allocated, ownership verified"
     cloud.save(args.phone / "inputs.json", inputs)
 
 

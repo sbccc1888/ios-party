@@ -1,5 +1,4 @@
 name: MIX2 HackiOS phone image
-
 on:
   push:
     branches: ['codex/hackios-chiron']
@@ -7,81 +6,14 @@ on:
       - '.github/workflows/hackios-chiron-package.yml'
       - 'ci/hackios/package-chiron.py'
       - 'ci/hackios/phone_loader.py'
-      - 'ci/hackios/apply_chiron_usb.py'
       - 'ci/hackios/apply_chiron_memory.py'
       - 'ci/hackios/memory_loader.inc'
-      - 'ci/hackios/apply_memory_policy.py'
-      - 'ci/hackios/build-memory-firmware.sh'
-      - 'ci/hackios/build-chiron-entry.sh'
-      - 'package/ChironCiPkg/ChironHackios.*'
-      - 'package/ChironCiPkg/ChironMemoryWindow.h'
-      - 'package/ChironCiPkg/ChironReserveWindow.inc'
-      - 'tools/start_chiron_hackios.py'
   workflow_dispatch:
-
 permissions:
   contents: read
   actions: read
-
 jobs:
-  entry:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - name: Check the corrected early heap and memory ownership
-        run: python3 -B -m unittest discover -s tests -p 'test_chiron_*.py' -v
-      - name: Reuse the unchanged compiled HK6 entry and RAM driver
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: chiron-memory-entry-39947141008
-          path: dist/chiron-entry
-          github-token: ${{ github.token }}
-          run-id: '39947141008'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: chiron-memory-entry-${{ github.run_id }}
-          path: dist/chiron-entry/
-          if-no-files-found: error
-          retention-days: 7
-  firmware:
-    needs: entry
-    runs-on: ubuntu-22.04
-    timeout-minutes: 60
-    env:
-      CHIRON_EFI_RUN: '39417919101'
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: chiron-efi
-          path: dist/efi
-          github-token: ${{ github.token }}
-          run-id: '39417919101'
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: chiron-memory-entry-${{ github.run_id }}
-          path: dist/chiron-entry
-      - name: Add the existing RAM driver rebuilt against its pinned source
-        run: cp dist/chiron-entry/ChironRamdisk.efi dist/efi/
-      - name: Install original-platform compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential uuid-dev iasl nasm gcc-aarch64-linux-gnu abootimg python3-distutils python3-pil python3-git gettext libfreetype6-dev
-      - name: Build firmware with low early heap and PEI-owned high bank
-        run: bash ci/hackios/build-memory-firmware.sh
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: chiron-memory-firmware-${{ github.run_id }}
-          path: dist/chiron-memory-firmware/
-          retention-days: 7
   image:
-    needs: [entry, firmware]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -95,30 +27,23 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang lld llvm mtools dosfstools
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: chiron-memory-entry-${{ github.run_id }}
-          path: dist/chiron-entry
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: chiron-memory-firmware-${{ github.run_id }}
-          path: dist/chiron-memory-firmware
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: chiron-source-trace-39770335838-1
-          path: dist/chiron-boot-template
-          github-token: ${{ github.token }}
-          run-id: '39770335838'
-      - name: Reuse the constrained source kernel and system-volume manifest
+      - name: Test allocation admission and ownership transitions
+        run: python3 -B -m unittest discover -s tests -p 'test_chiron_*.py' -v
+      - name: Reuse the unchanged HK6b firmware and entry
         run: |
+          gh run download 39951169904 --repo "$GITHUB_REPOSITORY" \
+            --name chiron-memory-entry-39951169904 --dir dist/chiron-entry
+          gh run download 39951169904 --repo "$GITHUB_REPOSITORY" \
+            --name chiron-memory-firmware-39951169904 --dir dist/chiron-memory-firmware
+          gh run download 39770335838 --repo "$GITHUB_REPOSITORY" \
+            --name chiron-source-trace-39770335838-1 --dir dist/chiron-boot-template
           gh run download 39922183783 --repo "$GITHUB_REPOSITORY" \
             --name chiron-hackios-39922183783 --dir dist/chiron-runtime
-      - name: Reuse the unchanged HK6 ownership-checking loader
+      - name: Compile only the corrected small EFI loader
         run: |
-          gh run download 39947141008 --repo "$GITHUB_REPOSITORY" \
-            --name MIX2-HackiOS-HK6 --dir dist/hk6-reference
-          python3 -c 'import json,pathlib,sys,hashlib;sys.path.insert(0,"tools");from chiron_ram_fat import RamFat32;r=pathlib.Path("dist/hk6-reference/chiron-hackios-image");m=json.loads((r/"manifest.json").read_text());b=(r/"MIX2-HackiOS-8796-usb.img").read_bytes();assert hashlib.sha256(b).hexdigest()==m["sha256"];q=json.loads((r/"inspection/inspection.json").read_text());o=q["payload_offsets"]["ramdisk"];f=RamFat32(b[o:o+(24<<20)]+bytes(24<<20));loader=f.read("EFI/HackiOS/loader.efi");assert hashlib.sha256(loader).hexdigest()==m["phone_loader_sha256"];p=pathlib.Path("dist/chiron-runtime/phone");(p/"loader.efi").write_bytes(loader);(p/"inputs.json").write_text(json.dumps(m["phone_inputs"],indent=2)+"\n")'
-      - name: Retain the qualified transport shim and source-build the firmware body
+          python3 ci/hackios/phone_loader.py --work "$RUNNER_TEMP/chiron-phone-loader" \
+            --phone dist/chiron-runtime/phone
+      - name: Package the unchanged firmware with the corrected loader
         run: |
           python3 ci/hackios/package-chiron.py \
             --template dist/chiron-boot-template/CT-39770335838-1-775f3f2e4009.img \
@@ -132,10 +57,10 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: MIX2-HackiOS-HK6b
+          name: MIX2-HackiOS-HK6c
           path: |
             dist/chiron-hackios-image/
             dist/chiron-entry/
-            dist/chiron-memory-firmware/
+            dist/chiron-memory-firmware/memory-policy.json
           retention-days: 7
           compression-level: 1
