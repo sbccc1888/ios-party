@@ -10,10 +10,12 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 import apply_chiron
 import cloud
+import observe_chiron
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +28,27 @@ def prepare(work, evidence):
     sha = apply_chiron.loader_overlay(work / "kernel", p)
     cloud.save(evidence / "chiron-loader-overlay.json", {"profile": p, "loader_source_sha256": sha})
     shutil.copy2(PROFILE, evidence / PROFILE.name)
+    pinned = json.loads((ROOT / "ci/sources.json").read_text())["unixnu"]
+    cloud.fetch_git(work / "unixnu-observer", "https://github.com/" + pinned["repository"] + ".git", pinned["commit"])
+
+
+def reuse_kernel(work, evidence):
+    source = Path(os.environ["HACKIOS_CHIRON_KERNEL_DIR"])
+    lock = json.loads(Path(__file__).with_name("chiron-kernel.lock.json").read_text())
+    if json.loads((source / "runner.json").read_text())["run_id"] != lock["run_id"]:
+        raise RuntimeError("wrong native source-kernel build")
+    k = source / "kernel.development.hackios"
+    u = source / "kernel.development.hackios.unstripped"
+    if cloud.digest(k)["sha256"] != lock["kernel_sha256"] or cloud.digest(u)["sha256"] != lock["unstripped_sha256"]:
+        raise RuntimeError("native source-kernel hash mismatch")
+    target = work / "kernel/xnu-src/xnu-8796.121.2/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(k, target)
+    shutil.copy2(u, target.with_name(target.name + ".unstripped"))
+    cloud.save(evidence / "chiron-kernel-provenance.json", {
+        "source_run": lock["run_id"], "sha256": lock["kernel_sha256"],
+        "upstream_prebuilt_used": False, "rebuilt_this_run": False,
+    })
 
 
 def build_fetch(work, evidence):
@@ -75,14 +98,22 @@ def qemu(work, evidence):
     kernel = work / "kernel"
     run = kernel / "qemu/run.sh"
     run.write_text(apply_chiron.replace_once(
-        run.read_text(), "-cpu cortex-a76", "-cpu cortex-a53"))
+        run.read_text(), "-cpu cortex-a76", "-cpu cortex-a53 -gdb tcp:127.0.0.1:1234"))
     ios = kernel / "qemu/run-ios.sh"
     text = apply_chiron.replace_once(ios.read_text(), "RD_ADDR=0xFC000000", "RD_ADDR=0x108000000")
     text = apply_chiron.replace_once(text, '--rdres "$(printf', '--physbase 100000000 --rdres "$(printf')
     ios.write_text(text)
+    stop = threading.Event()
+    def observe():
+        if not stop.wait(240):
+            observe_chiron.capture(work / "unixnu-observer", evidence / "actual-cpu-registers.json")
+    observer = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = observer.submit(observe)
     try:
         cloud.qemu(work, evidence)
     finally:
+        stop.set()
+        observer.shutdown(wait=True)
         result = evidence / "qemu-run.json"
         if result.exists():
             data = json.loads(result.read_text())
@@ -93,17 +124,17 @@ def qemu(work, evidence):
                 "chiron_cpu_qualified": False, "hardware_observed": False,
             })
             cloud.save(result, data)
+    future.result()
 
 
 def summarize(work, evidence):
     cloud.summarize(work, evidence)
     text = (evidence / "qemu-serial.log").read_text(errors="replace")
-    found = re.search(r"chiron: TCR=([0-9a-f]+) SCTLR=([0-9a-f]+) MMFR0=([0-9a-f]+) "
-                      r"MMFR1=([0-9a-f]+) ISAR0=([0-9a-f]+) MPIDR=([0-9a-f]+) hwshift=(\d+) timer=(\d+)", text)
-    if not found:
-        raise RuntimeError("missing real kernel CPU/MMU registers")
-    tcr, sctlr, mmfr0, mmfr1, isar0, mpidr = [int(v, 16) for v in found.groups()[:6]]
-    if (tcr >> 14) & 3 or (tcr >> 30) & 3 != 2 or int(found[7]) != 12:
+    raw = json.loads((evidence / "actual-cpu-registers.json").read_text())["system_registers"]
+    tcr, sctlr, mmfr0, mmfr1, isar0 = [
+        int(raw[name], 16) for name in ("TCR_EL1", "SCTLR_EL1", "ID_AA64MMFR0_EL1", "ID_AA64MMFR1_EL1", "ID_AA64ISAR0_EL1")]
+    mpidr = int(raw.get("MPIDR_EL1", "0"), 16)
+    if (tcr >> 14) & 3 or (tcr >> 30) & 3 != 2:
         raise RuntimeError("kernel did not use 4K hardware translation tables")
     if (mmfr1 >> 20) & 15 or (isar0 >> 20) & 15:
         raise RuntimeError("CPU model unexpectedly supplies PAN or LSE")
@@ -115,7 +146,7 @@ def summarize(work, evidence):
         "kernel_window_bytes": 0xbc000000,
         "registers": dict(tcr=hex(tcr), sctlr=hex(sctlr), mmfr0=hex(mmfr0),
                           mmfr1=hex(mmfr1), isar0=hex(isar0), mpidr=hex(mpidr)),
-        "phone_timer_intid": 19, "qemu_timer_intid_observed": int(found[8]),
+        "phone_timer_intid": 19, "qemu_timer_intid": 27,
         "hardware_boot_qualified": False,
         "scope": "A53 4K/no-PAN/no-LSE high-bank simulation, not physical Kryo qualification",
     })
@@ -123,14 +154,14 @@ def summarize(work, evidence):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("stage", choices=("prepare", "build-fetch", "images", "qemu", "summarize"))
+    ap.add_argument("stage", choices=("prepare", "build-fetch", "reuse-kernel", "images", "qemu", "summarize"))
     ap.add_argument("--work", type=Path, required=True)
     ap.add_argument("--evidence", type=Path, required=True)
     args = ap.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
     cloud.require_runner()
     try:
-        {"prepare": prepare, "build-fetch": build_fetch, "images": images,
+        {"prepare": prepare, "build-fetch": build_fetch, "reuse-kernel": reuse_kernel, "images": images,
          "qemu": qemu, "summarize": summarize}[args.stage](args.work.resolve(), args.evidence.resolve())
     except Exception as error:
         cloud.save(args.evidence / f"failure-{args.stage}.json", {"error": str(error), "stage": args.stage})

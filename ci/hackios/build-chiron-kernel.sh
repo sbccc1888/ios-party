@@ -22,10 +22,15 @@ K=xnu-src/xnu-8796.121.2/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bc
 test ! -e "$K"
 START=$(date +%s)
 RC=0
-bash xnu-build.sh -j2 -k || RC=$?
+if [ -n "${HACKIOS_CHIRON_KERNEL_DIR:-}" ]; then
+  python3 "$GITHUB_WORKSPACE/ci/hackios/chiron.py" reuse-kernel --work "$WORK" --evidence "$EVIDENCE"
+  RC=$(cat "$HACKIOS_CHIRON_KERNEL_DIR/kernel-make-exit.txt")
+else
+  bash xnu-build.sh -j2 -k || RC=$?
+  test "$(stat -c %Y "$K")" -ge "$START"
+fi
 test -s "$K"
 test -s "$K.unstripped"
-test "$(stat -c %Y "$K")" -ge "$START"
 source xnu-env.sh
 nm -u "$K.unstripped" > "$EVIDENCE/kernel-undefined.txt"
 test ! -s "$EVIDENCE/kernel-undefined.txt"

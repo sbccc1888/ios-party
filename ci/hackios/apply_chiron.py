@@ -19,6 +19,11 @@ def replace_once(text, old, new):
 def loader_overlay(source, profile):
     path = source / "xnuloader/loader.c"
     text = path.read_text()
+    for instruction in ("0xd500409f", "0xd500407f"):
+        old = f".inst {instruction}"
+        if text.count(old) != 2:
+            raise ValueError("loader PAN/UAO return context changed")
+        text = text.replace(old, ".inst 0xd503201f")
     text = replace_once(text, "static efi_handle IMAGE;", "static efi_handle IMAGE;\nstatic int chiron_mode;")
     text = replace_once(text, "\tefi_block_io *bio = find_log_partition();",
                         "\tefi_block_io *bio = chiron_mode ? NULL : find_log_partition();")
