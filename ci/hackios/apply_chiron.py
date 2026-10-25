@@ -9,6 +9,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
+# MSM8998: four cores per affinity-1 value (cpu@0..3 -> 0x000..0x003,
+# cpu@100..103 -> 0x100..0x103).
+CHIRON_CORES_PER_CLUSTER = 4
+
 
 def replace_once(text, old, new):
     if text.count(old) != 1:
@@ -38,7 +42,7 @@ def loader_overlay(source, profile):
 \t.name = "chiron", .io_base = 0x01000000, .io_size = 0xff000000,
 \t.gic_dist = 0x17a00000, .gic_redist = 0x17b00000,
 \t.uart = 0, .psci_hvc = 0, .cores = {cores}, .core_shift = {core_shift},
-\t.core_per_cluster = 4, .log_other_cpu = 1,
+\t.log_other_cpu = 1,
 \t.virtual_timer_intid = 19, .fb_base = 0x9d400000,
 };
 
@@ -76,8 +80,27 @@ def loader_overlay(source, profile):
     #
     # That is a limit of the first port, not of MSM8998: the kernel starts cores with
     # PSCI CPU_ON itself. Skipped, so `cpus=` reaches the kernel.
-    text = replace_once(text, "\tuint64_t cpu_mpidr[8] = { kernel_mpidr };",
-                        "\tuint64_t cpu_mpidr[8] = { kernel_mpidr };")
+    # CHIRON_CLUSTER_MAP
+    #
+    # MSM8998 numbers four cores under one affinity-1 value: cpu@0..3 report MPIDR
+    # 0x000..0x003 and the second cluster's four report 0x100..0x103.  The loader's
+    # arithmetic is linear -- mpidr = core << core_shift -- so at core_shift 8 it can
+    # name 0x000, 0x100, 0x200 ... but never 0x101.  Seven of the eight cores would be
+    # asked for at addresses the SoC does not have.
+    #
+    # Both directions are rewritten: a core number becomes (core / 4) << shift |
+    # (core % 4), and the MPIDR read back becomes cluster * 4 + index.
+    text = replace_once(
+        text,
+        "\tint cpu_count = 1, boot_core = (int)(kernel_mpidr >> plat->core_shift);",
+        "\tint cpu_count = 1,\n"
+        f"\t    boot_core = (int)((kernel_mpidr >> plat->core_shift) & 0xff) * {CHIRON_CORES_PER_CLUSTER} +\n"
+        f"\t    (int)(kernel_mpidr & {CHIRON_CORES_PER_CLUSTER} - 1);")
+    text = replace_once(
+        text,
+        "\t\t\t\tuint64_t mpidr = (uint64_t)core << plat->core_shift;",
+        f"\t\t\t\tuint64_t mpidr = ((uint64_t)(core / {CHIRON_CORES_PER_CLUSTER}) << plat->core_shift) |\n"
+        f"\t\t\t\t    (uint64_t)(core % {CHIRON_CORES_PER_CLUSTER});")
     path.write_text(text)
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
