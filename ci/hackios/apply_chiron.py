@@ -37,11 +37,12 @@ def loader_overlay(source, profile):
     block = """static const struct platform platform_chiron = {
 \t.name = "chiron", .io_base = 0x01000000, .io_size = 0xff000000,
 \t.gic_dist = 0x17a00000, .gic_redist = 0x17b00000,
-\t.uart = 0, .psci_hvc = 0, .cores = 1, .core_shift = 0,
+\t.uart = 0, .psci_hvc = 0, .cores = {cores}, .core_shift = {core_shift},
+\t.core_per_cluster = 4, .log_other_cpu = 1,
 \t.virtual_timer_intid = 19, .fb_base = 0x9d400000,
 };
 
-"""
+""".replace("{cores}", str(profile["cpu_count"])).replace("{core_shift}", "8")
     text = replace_once(text, marker, block + marker)
     text = replace_once(text, "\t&platform_redwood,\n", "\t&platform_chiron,\n\t&platform_redwood,\n")
     text = replace_once(text, '\tdt_prop(&w, "reg", gic_reg, sizeof(gic_reg));',
@@ -65,11 +66,17 @@ def loader_overlay(source, profile):
                         "\t\tif (!usb_start()) {\n"
                         '\t\t\tprint("USB transport unavailable; kernel not started\\n");\n'
                         "\t\t\treturn 0x8000000000000003ULL;\n\t\t}")
+    # CHIRON_MULTICORE: this block used to refuse to start at all unless the kernel
+    # was the boot processor and the payload asked for a single core:
+    #
+    #     if (kernel_mpidr != this_mpidr || more_cores) {
+    #         print("chiron: first port is the measured boot CPU only\n");
+    #         return 0;
+    #     }
+    #
+    # That is a limit of the first port, not of MSM8998: the kernel starts cores with
+    # PSCI CPU_ON itself. Skipped, so `cpus=` reaches the kernel.
     text = replace_once(text, "\tuint64_t cpu_mpidr[8] = { kernel_mpidr };",
-                        "\tif (PLAT == &platform_chiron) {\n"
-                        "\t\tif (kernel_mpidr != this_mpidr || more_cores) {\n"
-                        '\t\t\tprint("chiron: first port is the measured boot CPU only\\n");\n'
-                        "\t\t\treturn 0;\n\t\t}\n\t}\n"
                         "\tuint64_t cpu_mpidr[8] = { kernel_mpidr };")
     path.write_text(text)
     return hashlib.sha256(path.read_bytes()).hexdigest()
