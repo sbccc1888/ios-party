@@ -45,8 +45,8 @@ def apply(source):
         text,
         '\tprint("platform %s\\n", PLAT->name);',
         '\tprint("platform %s\\n", PLAT->name);\n'
-        '\tprint("multicore: cpus=%d boot mpidr=%x this mpidr=%x\\n",\n'
-        '\t    more_cores ? (uint64_t)CHIRON_CPUS : 1, kernel_mpidr, this_mpidr);',
+        '\tprint("multicore: more_cores=%d boot mpidr=%x this mpidr=%x\\n",\n'
+        '\t    (uint64_t)(more_cores ? 1 : 0), kernel_mpidr, this_mpidr);',
     )
     path.write_text(text)
     return {"xnuloader/loader.c": "patched"}

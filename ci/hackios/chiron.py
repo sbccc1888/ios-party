@@ -20,6 +20,7 @@ import observe_chiron
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = Path(__file__).with_name("chiron-profile.json")
+CHIRON_CPUS = 8      # all of MSM8998: four Cortex-A73 + four Cortex-A53
 
 
 def prepare(work, evidence):
@@ -75,7 +76,9 @@ def images(work, evidence):
     # transferred afterwards through the resident loader's existing USB API.
     phone = evidence / "phone"
     phone.mkdir(exist_ok=True)
-    cmdline = f"cpus=1 epoch={int(time.time())}"
+    # 多核：MSM8998 用 PSCI CPU_ON 拉起从核，虚拟定时器是 PPI 19。
+    # 想复现上游已验证的单核状态，把它改回 cpus=1。
+    cmdline = f"cpus={CHIRON_CPUS} epoch={int(time.time())}"
     cloud.command([
         "python3", kernel / "xnuloader/mkpayload.py", "--usb",
         "-o", phone / "payload.bin",

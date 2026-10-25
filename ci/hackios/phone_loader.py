@@ -9,6 +9,7 @@ import shutil
 import apply_chiron
 import apply_chiron_usb
 import apply_chiron_memory
+import apply_chiron_multicore
 import cloud
 
 

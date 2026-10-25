@@ -25,7 +25,9 @@ jobs:
     env:
       PORT_WORK: ${{ github.workspace }}/.cache/hackios-chiron
       PORT_EVIDENCE: ${{ github.workspace }}/dist/hackios-chiron
-      HACKIOS_CHIRON_KERNEL_DIR: ${{ github.workspace }}/dist/chiron-source-kernel-reuse
+      # CHIRON_BUILD_FROM_SOURCE: nothing is reused from the upstream prebuilt kernel.
+      # The multicore delta touches loader.c and gic_v3_irq.c, so the kernel is
+      # compiled here; the pinned artifact hash could not match after that.
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -47,12 +49,6 @@ jobs:
           if ! command -v 7z >/dev/null; then sudo ln -s "$(command -v 7zz)" /usr/local/bin/7z; fi
       - name: Apply the measured chiron loader profile
         run: python3 ci/hackios/chiron.py prepare --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: chiron-hackios-build-39905608161
-          path: dist/chiron-source-kernel-reuse
-          github-token: ${{ github.token }}
-          run-id: '39905608161'
       - name: Build native ARMv8-A kernel without PAN and prepare 20F66
         run: python3 ci/hackios/chiron.py build-fetch --work "$PORT_WORK" --evidence "$PORT_EVIDENCE"
       - name: Build original APFS closure and phone USB payload
