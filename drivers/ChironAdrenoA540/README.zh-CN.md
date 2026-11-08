@@ -71,6 +71,7 @@ cmd_size = data[0] - data[2] - 2;
 ```sh
 python3 tests/test_chiron_adreno_fw2.py    # fw2 容器解析
 python3 tests/test_chiron_adreno_gpucc.py  # GPUCC 上电序列
+python3 tests/test_chiron_adreno_gmu.py    # GMU 启动握手
 ```
 
 测试用真实固件验证解析结果，再逐一验证 11 种畸形输入被拒绝：
@@ -146,13 +147,63 @@ gpucc_rbcpr_clk        0x01054
 gpucc_gfx3d_clk        0x01098
 ```
 
+## GMU 启动握手
+
+来自 `adreno_a5xx.c:780` 的 `a5xx_gpmu_start()`，寄存器索引来自 `a5xx_reg.h:768-784`。
+
+### 索引是字偏移，不是字节偏移
+
+`a5xx_reg.h` 里的值是 **word offset**：
+
+```c
+static inline void kgsl_regwrite(struct kgsl_device *device,
+                                 unsigned int offsetwords, ...)
+```
+
+`adreno_regwrite()` 里还有 `BUG_ON(offsetwords * sizeof(uint32_t) >= device->reg_len)`。
+所以字节偏移 = 索引 × 4，本实现由 `GmuRegister()` 一次性完成这个换算。
+
+| 名称 | 字索引 | 字节偏移 |
+|---|---|---|
+| `GPMU_INST_RAM_BASE` | 0x8800 | 0x22000 |
+| `GPMU_DATA_RAM_BASE` | 0x9800 | 0x26000 |
+| `GPMU_WFI_CONFIG` | 0xA8C1 | 0x2A304 |
+| `GPMU_RBBM_INTR_INFO` | 0xA8D6 | 0x2A358 |
+| `GPMU_CM3_SYSRESET` | 0xA8D8 | 0x2A360 |
+| `GPMU_GENERAL_0` | 0xA8E0 | 0x2A380 |
+| `GPMU_GENERAL_1` | 0xA8E1 | 0x2A384 |
+
+### 握手
+
+```
+1. （仅 a530）写 GPMU_WFI_CONFIG = 0x00004014
+2. 写 GPMU_CM3_SYSRESET = 0        ← 释放 CM3 核心
+3. 轮询 GPMU_GENERAL_0 直到 == 0xBABEFACE（5000 次，每次 1µs）
+4. （非 a530）要求 GPMU_GENERAL_1 == 0
+```
+
+`0xBABEFACE` 是固件写入通用寄存器的"我活着"标记。硬件团队估计初始化约 3000 周期，
+所以内核轮询 5000 次、每次 1µs 后判定超时。
+
+**A540 走非 a530 分支**——内核的条件写的是 `adreno_is_a530()`，看起来像所有 a5xx 都成立，
+实际不是。A540 因此**不写** WFI_CONFIG，且**必须**检查 GENERAL_1。
+
+### 返回值
+
+| 结果 | 含义 |
+|---|---|
+| `Ok` | 固件启动成功 |
+| `NoRegisters` | 缺少必需的读/写回调 |
+| `FirmwareTimeout` | GENERAL_0 始终不是 0xBABEFACE |
+| `FirmwareError` | GENERAL_0 对了但 GENERAL_1 非零（错误码通过 `*error_value` 返回）|
+
 ## 下一层
 
 按 `research/CHIRON_GPU_A540_DELTA.zh-CN.md` 的顺序：
 
 1. ~~legacy fw2 解析~~（完成）
 2. ~~GPUCC 上电与时钟~~（完成）
-3. GMU 3.x 启动 + HFI
+3. ~~GMU 启动握手~~（完成；HFI 消息集待做）
 4. SMMU v2（`qcom,smmu-v2`，micro_mmu_control 0x6000）
 5. PFP/PM4 加载 + CP 初始化
 6. 命令提交与 fence
