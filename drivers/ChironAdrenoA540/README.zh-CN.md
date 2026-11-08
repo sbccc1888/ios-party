@@ -72,6 +72,7 @@ cmd_size = data[0] - data[2] - 2;
 python3 tests/test_chiron_adreno_fw2.py    # fw2 容器解析
 python3 tests/test_chiron_adreno_gpucc.py  # GPUCC 上电序列
 python3 tests/test_chiron_adreno_gmu.py    # GMU 启动握手
+python3 tests/test_chiron_adreno_smmu.py   # SMMU v2 context bank
 ```
 
 测试用真实固件验证解析结果，再逐一验证 11 种畸形输入被拒绝：
@@ -197,6 +198,74 @@ static inline void kgsl_regwrite(struct kgsl_device *device,
 | `FirmwareTimeout` | GENERAL_0 始终不是 0xBABEFACE |
 | `FirmwareError` | GENERAL_0 对了但 GENERAL_1 非零（错误码通过 `*error_value` 返回）|
 
+## SMMU v2
+
+`qcom,smmu-v2` 在 chiron 上位于 `0x05040000`，大小 `0x10000`。
+
+### 它其实就是标准 SMMU-500
+
+两个驱动的寄存器偏移逐个对照，完全一致：
+
+| 寄存器 | `kgsl_iommu.c` | `arm-smmu.c` |
+|---|---|---|
+| SCTLR | 0x00 | 0x00 |
+| TTBR0 | 0x20 | 0x20 |
+| CONTEXTIDR | 0x34 | 0x34 |
+| FSR | 0x58 | 0x58 |
+| FAR | 0x60 | 0x60 |
+
+**唯一的 Qualcomm 差异**是 `arm-smmu.c:1665` 的这段：
+
+```c
+if (smmu->model == SMMU_MODEL_QCOM_V2) {
+    reg = ACTLR_QCOM_ISH << ... | ACTLR_QCOM_OSH << ... | ACTLR_QCOM_NSH << ...;
+    writel_relaxed(reg, cb_base + ARM_SMMU_CB_ACTLR);
+}
+```
+
+`ACTLR_QCOM_{NSH,ISH,OSH}` 在 shift 30/29/28 各置 bit 1，所以写的是 **`0x70000000`**。
+标准 SMMU-500 不会写这个寄存器，qcom,smmu-v2 必须写，否则 GPU 事务的排序太弱。
+
+### Context bank 布局
+
+```
+基址 = 0x8000 + (index << 12)     每个 bank 占 0x1000
+```
+
+### 编程顺序（`SmmuProgramContext()`）
+
+| 顺序 | 寄存器 | 偏移 | 说明 |
+|---|---|---|---|
+| 1 | TTBR0 | 0x20/0x24 | 低/高两个 32 位写 |
+| 2 | TTBR1 | 0x28/0x2C | |
+| 3 | TTBCR | 0x30 | T0SZ / IRGN0 / ORGN0 / EAE |
+| 4 | TTBCR2 | 0x10 | SMMU-500 独有 |
+| 5 | MAIR0/1 | 0x38/0x3C | |
+| 6 | CONTEXTIDR | 0x34 | |
+| 7 | **ACTLR** | 0x04 | **Qualcomm 专用 `0x70000000`** |
+| 8 | SCTLR | 0x00 | **最后写**，写到这时前面的都被读过 |
+
+SCTLR 基础值 `CFIE | EAE_SBOP | M | S1_ASIDPNE`，然后：
+
+- `stall_on_fault` → 加 `CFCFG`（出错时暂停 GPU）
+- 否则 → 加 `HUPCF`（后续事务不受挂起错误影响）
+
+两者**互斥**。完整值实测为 `0x240010c1`：
+
+```
+bit0  M          1
+bit6  CFIE       1
+bit7  CFCFG      1
+bit12 S1_ASIDPNE 1
+bit26 TRE        1  ┐ EAE_SBOP
+bit29 AFE        1  ┘
+```
+
+### 一个易错的位域
+
+ASID 在 TTBR0 的 bit[55:48]。**右移 32 位后落在高字的 bit[23:16]**，即 ASID 7 写成
+`0x00070000`，**不是 `0x00000007`**。写成后者会把 ASID 放进 bit[39:32]，那是错的字段。
+
 ## 下一层
 
 按 `research/CHIRON_GPU_A540_DELTA.zh-CN.md` 的顺序：
@@ -204,6 +273,6 @@ static inline void kgsl_regwrite(struct kgsl_device *device,
 1. ~~legacy fw2 解析~~（完成）
 2. ~~GPUCC 上电与时钟~~（完成）
 3. ~~GMU 启动握手~~（完成；HFI 消息集待做）
-4. SMMU v2（`qcom,smmu-v2`，micro_mmu_control 0x6000）
+4. ~~SMMU v2 context bank 编程~~（完成；页表建立待做）
 5. PFP/PM4 加载 + CP 初始化
 6. 命令提交与 fence
