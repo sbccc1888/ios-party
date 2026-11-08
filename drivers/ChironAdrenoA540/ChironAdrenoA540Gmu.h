@@ -2,6 +2,25 @@
 //
 // A540 GMU (GPMU) start-up handshake.
 //
+// NO_HFI_ON_A540
+//
+// The port plan called for "GMU start plus HFI protocol", inherited from the A740 reference. There
+// is no HFI on this part, and finding that out removed a whole layer rather than adding one.
+//
+// grep for hfi across drivers/gpu/msm returns nothing relevant. What A5xx does instead, in
+// adreno_a5xx.c:
+//
+//   _gpmu_create_load_cmds()   encodes the GMU firmware image into PM4 commands
+//   _gpmu_send_init_cmds()     copies them into the ring buffer and submits
+//
+// so the GMU firmware travels through the command processor like any other work, and host and GMU
+// then speak through three registers -- GENERAL_0 for the alive word, GENERAL_1 for an error code,
+// RBBM_INTR_INFO for pending interrupts -- which is the handshake this file implements.
+//
+// Adreno740's AdrenoHfi, AdrenoHfiStartup and AdrenoHfiVotes are A7xx designs and none of them
+// apply here. Message queues, shared-memory layout and sequence numbers are all absent from this
+// generation.
+//
 // Source: drivers/gpu/msm/adreno_a5xx.c, a5xx_gpmu_start() at line 780, with the register
 // indices from drivers/gpu/msm/a5xx_reg.h:768-784.
 //
