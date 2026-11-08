@@ -1,20 +1,6 @@
-diff --git a/bsd/dev/hakios.stubs.c b/bsd/dev/hakios.stubs.c
-index ed5ca7f..e4e9793 100644
---- a/bsd/dev/hakios.stubs.c
-+++ b/bsd/dev/hakios.stubs.c
-@@ -71,6 +71,7 @@ void hakios_ddr_quiesce(void) {}
- 
- #ifndef HAKIOS_ADRENO
- void hakios_adreno_init(void) {}
-+void hakios_adreno_a540(void) {}
- void hakios_adreno_quiesce(void) {}
- void hakios_adreno_stop(void) {}
- void hakios_adreno_minute(void) {}
-diff --git a/bsd/dev/hakios.adreno.c b/bsd/dev/hakios.adreno.c
-index 3f1f97a..a31995d 100644
---- a/bsd/dev/hakios.adreno.c
-+++ b/bsd/dev/hakios.adreno.c
-@@ -3850,3 +3850,398 @@ hakios_adreno_init(void)
+--- a/bsd/dev/redwood_adreno.c
++++ b/bsd/dev/redwood_adreno.c
+@@ -4123,3 +4123,398 @@
  	}
  	printf("adreno: over; the system goes on starting\n");
  }
@@ -388,7 +374,7 @@ index 3f1f97a..a31995d 100644
 +};
 +
 +void
-+hakios_adreno_a540(void)
++redwood_adreno_a540(void)
 +{
 +	uint32_t last = 0, step_at = 0;
 +
@@ -414,27 +400,23 @@ index 3f1f97a..a31995d 100644
 +	printf("adreno_a540: all %u steps done; nothing was written\n", last);
 +}
 \ No newline at end of file
-diff --git a/bsd/dev/hakios.input.c b/bsd/dev/hakios.input.c
-index 8452a55..13566e9 100644
---- a/bsd/dev/hakios.input.c
-+++ b/bsd/dev/hakios.input.c
-@@ -289,6 +289,7 @@ hakios_input_init(void)
- 	hakios_ufs_init();
- 	hakios_net_init();
- 	hakios_adreno_init();
-+	hakios_adreno_a540();
- 	hakios_wifi_init();
- 	hakios_adsp_init();
- 	hakios_mpss_init();
-diff --git a/bsd/sys/hakios.input.h b/bsd/sys/hakios.input.h
-index bfb7d63..77f62a3 100644
---- a/bsd/sys/hakios.input.h
-+++ b/bsd/sys/hakios.input.h
-@@ -79,6 +79,7 @@ void hakios_adreno_init(void);         /* boot-arg adreno=N: the first N steps o
- void hakios_adreno_quiesce(void);      /* on the way back to the loader: the GPU block stopped, out of our memory */
- void hakios_adreno_stop(void);         /* before that, where the ending is no panic's: the GPU given back in order */
- void hakios_adreno_minute(void);       /* once a minute: a line about how warm the GPU is, if it is in use */
-+void hakios_adreno_a540(void);        /* boot-arg adreno_a540=N: the first N read-only steps of the MIX 2's A540 */
- void hakios_wifi_init(void);           /* boot-arg wifi=1: the phone's Wi-Fi; wifi_step=N: the first N steps of it */
- void hakios_adsp_init(void);           /* boot-arg adsp=1: the phone's audio DSP started and linked; adsp_step=N: the first N steps */
- void hakios_mpss_init(void);           /* boot-arg modem=1: the phone's modem started and linked; modem_step=N: the first N steps */
+--- a/bsd/dev/redwood_input.c
++++ b/bsd/dev/redwood_input.c
+@@ -222,6 +222,7 @@
+ 	redwood_ufs_init();
+ 	redwood_net_init();
+ 	redwood_adreno_init();
++	redwood_adreno_a540();
+ 	redwood_wifi_init();
+ 	redwood_adsp_init();
+ }
+--- a/bsd/sys/redwood_input.h
++++ b/bsd/sys/redwood_input.h
+@@ -72,6 +72,7 @@
+ void redwood_battery_report(const struct redwood_battery_state *state);
+ void redwood_net_init(void);            /* en0, if there is something to carry its frames: sys/redwood_net.h */
+ void redwood_cpufreq_init(void);        /* boot-arg cpufreq=1: the phone's processor at full speed */
++void redwood_adreno_a540(void);        /* boot-arg adreno_a540=N: the first N read-only steps of the MIX 2's A540 */
+ void redwood_adreno_init(void);         /* boot-arg adreno=N: the first N steps of waking the phone's GPU */
+ void redwood_adreno_quiesce(void);      /* on the way back to the loader: the GPU block stopped, out of our memory */
+ void redwood_adreno_stop(void);         /* before that, where the ending is no panic's: the GPU given back in order */
