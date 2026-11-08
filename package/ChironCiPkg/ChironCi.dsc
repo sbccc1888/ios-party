@@ -46,4 +46,5 @@
   UniXNUPkg/Test/XnuTest/XnuTest.inf
   DarwinBootPkg/Driver/DarwinBoot.inf
   ChironCiPkg/ChironProbe.inf
+  ChironCiPkg/ChironGpuProbe.inf
   ChironCiPkg/ChironRamdisk.inf

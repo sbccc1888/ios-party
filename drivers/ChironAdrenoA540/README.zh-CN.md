@@ -66,6 +66,57 @@ cmd_size = data[0] - data[2] - 2;
 内核的检查是 `if ((major > header[i+1]) && header[i+1])`，即只拒绝更新的主版本，
 所以 9 > 0 不是问题。
 
+## 实机探针：ChironGpuProbe.efi
+
+六层全部通过单元测试之后，下一步不是继续往上写，而是**上机读一次寄存器**。
+`package/ChironCiPkg/ChironGpuProbe.c` 就是那个探针，**只读，不写任何寄存器**。
+
+### 为什么先读不写
+
+从 UEFI 里给 GPU 上电，而 Android 的 kgsl 可能仍持有这个块，是那种"挂住且没有任何
+诊断信息"的操作。先读能回答两个更基础的问题：
+
+1. `0x05000000` / `0x05040000` / `0x05065000` 这三个窗口在这个阶段**是否可访问**？
+2. 读出来的值**像不像一颗 GPU**？
+
+如果 `GPU_REVISION` 读到 `FFFFFFFF` 或 `00000000`，说明窗口没映射或块未上电，
+那么后面所有关于寄存器地址的推断都无从谈起。
+
+### 它读什么
+
+| 组 | 寄存器 | 判据 |
+|---|---|---|
+| 身份 | `GPU_REVISION` `CHIP_ID` `PRODUCT_ID` `RBBM_STATUS` | product id 应在 0x0504 段 |
+| 电源域 | `GPU_CX_GDSCR` `GPU_GX_GDSCR` `GPU_GX_BCR` `GPUCC_GX_DOMAIN` | bit0 = collapse |
+| 时钟 | `GPUCC_GFX3D_CBCR` `GPUCC_CXO_CBCR` `GPUCC_GFX3D_RCGR` | bit0 = 开 |
+| GMU | `GPMU_CM3_SYSRESET` `GPMU_GENERAL_0/1` `GPMU_RBBM_INTR` | `0xBABEFACE` = 固件在跑 |
+| CP | `CP_RB_BASE` `CP_RB_CNTL` `CP_RB_RPTR/WPTR` `CP_ME_CNTL` | 环是否已建立 |
+| SMMU | `CB_SCTLR` `CB_ACTLR` `CB_TTBR0` `CB_TTBCR` | `ACTLR` 应为 `70000000` |
+
+SMMU 的 `CB_ACTLR` 是特别有意思的一项：内核只在 `model == SMMU_MODEL_QCOM_V2` 时写
+`0x70000000`。如果真机上这个值确实是 `70000000`，就证明 `qcom,smmu-v2` 走的正是那条
+分支——**整个 SMMU 层的核心假设就被硅片确认了**。
+
+### 构建
+
+工程的完整 DSC 会连带 UniXNU、DarwinBoot 等一长串模块。探针不需要它们，所以另有一个
+最小平台 `package/ChironCiPkg/ChironGpuProbeOnly.dsc`，只编译这一个模块：
+
+```sh
+EDK2=/root/hk/Mu-Silicium/Mu_Basecore
+export WORKSPACE=/root/hk/gpuprobe-work
+export PACKAGES_PATH="/root/hk/ios-party-work/package:$EDK2"
+export EDK_TOOLS_PATH="$EDK2/BaseTools"
+export PYTHON_COMMAND=python3
+export CLANG_BIN=/usr/lib/llvm-18/bin/
+export PATH="$EDK_TOOLS_PATH/BinWrappers/PosixLike:$EDK_TOOLS_PATH/Source/C/bin:$PATH"
+export CONF_PATH="$WORKSPACE/Conf"
+make -C "$EDK2/BaseTools/Source/C" -j4      # 首次需要
+build -p ChironCiPkg/ChironGpuProbeOnly.dsc -a AARCH64 -b DEBUG -t CLANGPDB
+```
+
+产物 `ChironGpuProbe.efi`，9728 字节，PE32+ AArch64 EFI application（Machine `0xAA64`）。
+
 ## 测试
 
 ```sh

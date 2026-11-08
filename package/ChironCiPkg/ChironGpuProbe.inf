@@ -1,0 +1,19 @@
+## SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010019
+  BASE_NAME = ChironGpuProbe
+  FILE_GUID = 8E4B2A17-3C5D-4F80-9A6E-1B2C3D4E5F60
+  MODULE_TYPE = UEFI_APPLICATION
+  VERSION_STRING = 0.1
+  ENTRY_POINT = ChironGpuProbeEntry
+
+[Sources]
+  ChironGpuProbe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
