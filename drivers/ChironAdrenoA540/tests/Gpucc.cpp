@@ -63,21 +63,38 @@ struct Model {
 }  // namespace
 
 int main() {
-  // ---- the frequency table is the v2 one ------------------------------------
-  CHECK(kGfx3dV2Count == 8);
-  // The eight rates the device tree reports, in the same order, read off the phone.
-  const uint32_t dt[8] = {180000000u, 257000000u, 342000000u, 414000000u,
-                          515000000u, 596000000u, 670000000u, 710000000u};
-  for (size_t i = 0; i < 8; ++i) CHECK(kGfx3dV2[i].core_hz == dt[i]);
-  // Every entry's PLL target is exactly twice the core rate, which is what the even
-  // post-divider produces.
+  // ---- the frequency table matches the running kernel ------------------------
+  // Seven levels, ascending, because that is what the phone reports:
+  //   gpu_available_frequencies = 710 670 596 515 414 342 257 MHz
+  //   num_pwrlevels = 7
+  // The kernel table also has 180 MHz and so does the device tree, but the live kernel
+  // does not expose it, so it is not in this table.
+  CHECK(kGfx3dV2Count == 7);
+  const uint32_t live[7] = {257000000u, 342000000u, 414000000u, 515000000u,
+                            596000000u, 670000000u, 710000000u};
+  for (size_t i = 0; i < 7; ++i) CHECK(kGfx3dV2[i].core_hz == live[i]);
+  // Every entry's PLL target is exactly twice the core rate.
   for (size_t i = 0; i < kGfx3dV2Count; ++i)
     CHECK(kGfx3dV2[i].pll_hz == 2 * kGfx3dV2[i].core_hz);
-  // qcom,initial-pwrlevel is 6, and table index 6 is 670 MHz in the DT ordering... but
-  // the DT lists levels high-to-low, so its index 6 is the second slowest, 257 MHz, which
-  // is this table's index 1.  Check the rate, not the index, to keep that clear.
-  CHECK(kGfx3dInitialLevel < kGfx3dV2Count);
-  CHECK(kGfx3dV2[1].core_hz == 257000000u);
+
+  // ---- the two numbering schemes point at different ends of the table --------
+  // Kernel power levels are fastest-first; this table is fastest-last. Level 6 is the
+  // slowest, which is 257 MHz, i.e. index 0 here. Treating 6 as a table index would give
+  // 670 MHz -- nearly three times the rate the part actually starts at.
+  CHECK(kGfx3dPwrLevelCount == 7);
+  CHECK(kGfx3dInitialPwrLevel == 6);
+  CHECK(kGfx3dInitialTableIndex == 0);
+  CHECK(Gfx3dTableIndexFromPwrLevel(6) == 0);
+  CHECK(kGfx3dV2[Gfx3dTableIndexFromPwrLevel(6)].core_hz == 257000000u);
+  CHECK(Gfx3dTableIndexFromPwrLevel(0) == 6);
+  CHECK(kGfx3dV2[Gfx3dTableIndexFromPwrLevel(0)].core_hz == 710000000u);
+  CHECK(Gfx3dTableIndexFromPwrLevel(3) == 3);
+  CHECK(kGfx3dV2[Gfx3dTableIndexFromPwrLevel(3)].core_hz == 515000000u);
+  // Out-of-range levels clamp to the fastest rather than reading past the table.
+  CHECK(Gfx3dTableIndexFromPwrLevel(7) == 0);
+  CHECK(Gfx3dTableIndexFromPwrLevel(99) == 0);
+  // The 180 MHz rate is gone, and nothing in the table is below the phone's 257 MHz floor.
+  for (size_t i = 0; i < kGfx3dV2Count; ++i) CHECK(kGfx3dV2[i].core_hz >= 257000000u);
 
   // ---- the gate table covers the five CBCRs inside GPUCC --------------------
   CHECK(kGpuccGateCount == 5);

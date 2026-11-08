@@ -3,12 +3,14 @@
 
 namespace chiron_adreno {
 
-// clock-gpu-8998.c:168, ftbl_gfx3d_clk_src_v2.
+// The seven levels the running kernel actually exposes, ascending. The kernel table also
+// lists 180 MHz but the phone reports only seven levels with a 257 MHz floor, so that rate
+// is not selectable here and is left out rather than carried as an entry nothing can use.
 const GpuFreqLevel kGfx3dV2[] = {
-    {180000000, 360000000},   {257000000, 514000000},
-    {342000000, 684000000},   {414000000, 828000000},
-    {515000000, 1030000000},  {596000000, 1192000000},
-    {670000000, 1340000000},  {710000000, 1420000000},
+    {257000000, 514000000},   {342000000, 684000000},
+    {414000000, 828000000},   {515000000, 1030000000},
+    {596000000, 1192000000},  {670000000, 1340000000},
+    {710000000, 1420000000},
 };
 const size_t kGfx3dV2Count = sizeof(kGfx3dV2) / sizeof(kGfx3dV2[0]);
 

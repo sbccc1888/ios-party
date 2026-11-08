@@ -100,24 +100,48 @@ qcom,gfxcc@5065000   compatible "qcom,gfxcc-8998"   reg = <0x5065000 0x9000>
 和 GX 复位（0x1090）、GX 域控制（0x130）全都在这一个 0x9000 的块里。
 本实现因此只有一个 `block` 指针。
 
-### 频率表
+### 频率表：7 档，不是 8 档（真机实测修正）
 
-`ftbl_gfx3d_clk_src_v2`（`clock-gpu-8998.c:168`）的 8 个档位与设备树读到的**完全一致**：
+内核的 `ftbl_gfx3d_clk_src_v2`（`clock-gpu-8998.c:168`）列了 8 档，设备树的
+`qcom,gpu-freq` 也是 8 个，**但运行中的内核只暴露 7 档**：
 
-| core_hz | pll_hz |
-|---|---|
-| 180 MHz | 360 MHz |
-| 257 MHz | 514 MHz |
-| 342 MHz | 684 MHz |
-| 414 MHz | 828 MHz |
-| 515 MHz | 1030 MHz |
-| 596 MHz | 1192 MHz |
-| 670 MHz | 1340 MHz |
-| 710 MHz | 1420 MHz |
+```
+gpu_available_frequencies = 710000000 670000000 596000000 515000000
+                            414000000 342000000 257000000
+num_pwrlevels  = 7
+min_clock_mhz  = 257
+max_clock_mhz  = 710
+```
+
+**180 MHz 在这台机器上不是可选档位**，所以本表不含它。写入 180 MHz 会向 GPUCC 请求
+一个内核从不使用的频率。
+
+| 表索引 | core_hz | pll_hz |
+|---|---|---|
+| 0 | 257 MHz | 514 MHz |
+| 1 | 342 MHz | 684 MHz |
+| 2 | 414 MHz | 828 MHz |
+| 3 | 515 MHz | 1030 MHz |
+| 4 | 596 MHz | 1192 MHz |
+| 5 | 670 MHz | 1340 MHz |
+| 6 | 710 MHz | 1420 MHz |
 
 每个 PLL 目标都是 core 的 2 倍，由 `gpu_pll0_pll_out_even` 后分频产生。
-设备树的 `qcom,initial-pwrlevel=6` 是**从高到低**排的第 6 个，即 257 MHz，
-在本表里是索引 1。
+
+### 两套编号方向相反（这是一个真实的 bug）
+
+内核的 power level **从快到慢**编号，而本表**从慢到快**排列：
+
+```
+default_pwrlevel = 6      min_pwrlevel = 6
+min_clock_mhz    = 257    max_clock_mhz = 710
+```
+
+所以 **level 6 是最慢档 = 257 MHz = 本表的索引 0**。
+
+如果把 6 直接当成本表索引，会取到 **670 MHz，接近实际起始频率的三倍**。
+`Gfx3dTableIndexFromPwrLevel()` 做这个换算，测试断言了 level 6 → 索引 0 → 257 MHz
+以及 level 0 → 索引 6 → 710 MHz。
 
 ### 上电顺序（`GpuccPowerUp()`）
 

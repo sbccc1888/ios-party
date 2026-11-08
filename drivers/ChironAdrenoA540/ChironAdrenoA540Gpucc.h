@@ -85,14 +85,41 @@ struct GpuFreqLevel {
   uint32_t pll_hz;   // gpu_pll0_pll_out_even target
 };
 
-// ftbl_gfx3d_clk_src_v2 from clock-gpu-8998.c. chiron's device tree carries exactly
-// these eight rates, which is what makes this the right table for A540 rather than the
-// v1 or vq variants the same file also defines.
+// ftbl_gfx3d_clk_src_v2 from clock-gpu-8998.c. Ascending, which is the order the kernel
+// table is written in.
+//
+// COUNT IS SEVEN, NOT EIGHT, and that is measured rather than derived. The kernel table
+// lists eight rates including 180 MHz, and chiron's device tree also lists eight, but the
+// running kernel reports:
+//
+//     gpu_available_frequencies = 710000000 670000000 596000000 515000000 414000000
+//                                 342000000 257000000
+//     num_pwrlevels = 7    min_clock_mhz = 257    max_clock_mhz = 710
+//
+// so 180 MHz is not a selectable level on this part. Programming it would ask the GPUCC
+// for a rate the kernel never uses.
 extern const GpuFreqLevel kGfx3dV2[];
 extern const size_t kGfx3dV2Count;
 
-// The device tree's qcom,initial-pwrlevel is 6, so 257 MHz is where the part starts.
-enum : uint32_t { kGfx3dInitialLevel = 6 };
+// Power-level indices run the other way round from this table. The kernel's pwrlevels are
+// ordered fastest first, and the device tree's qcom,initial-pwrlevel = 6 therefore names
+// the *slowest* level:
+//
+//     num_pwrlevels = 7    default_pwrlevel = 6    min_pwrlevel = 6
+//     min_clock_mhz = 257  max_clock_mhz = 710
+//
+// So level 6 is 257 MHz, which is this ascending table's index 0. Reading 6 as an index
+// into kGfx3dV2 would pick 670 MHz and start the part nearly three times too fast.
+enum : uint32_t {
+  kGfx3dPwrLevelCount = 7,
+  kGfx3dInitialPwrLevel = 6,     // kernel numbering, fastest-first
+  kGfx3dInitialTableIndex = 0,   // the same level as an index into kGfx3dV2
+};
+
+// Converts a kernel power level to an index into kGfx3dV2. Level 0 is the fastest.
+inline uint32_t Gfx3dTableIndexFromPwrLevel(uint32_t level) {
+  return level >= kGfx3dPwrLevelCount ? 0u : (kGfx3dPwrLevelCount - 1 - level);
+}
 
 // Which clock each named GPUCC CBCR gates. Order matches the device tree's clock-names
 // list, which is core_clk, iface_clk, rbbmtimer_clk, mem_clk, mem_iface_clk, isense_clk,
