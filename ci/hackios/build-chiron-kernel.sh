@@ -14,6 +14,16 @@ collect_logs() {
 trap collect_logs EXIT
 cd "$WORK/kernel"
 bash xnu/apply.sh
+#
+# The A540 path, after xnu/apply.sh has built the kernel tree and walked drivers/map into it, and before
+# anything is compiled. The patch adds a system header, a call site, a stub, and 395 lines of read-only
+# bring-up steps in the Adreno driver -- which is the only place a GPU of this generation can be reached
+# from this kernel at all. It goes here rather than into a fork of the kernel repository so that the
+# pinned commit stays pinned; what changes is a patch in this repository, where every other change to
+# this port already lives.
+#
+git -C xnu-src/xnu-8796.121.2 apply "$GITHUB_WORKSPACE/ci/hackios/patches/0002-chiron-a540-gpu.patch"
+echo "chiron: the A540 patch is applied to the kernel tree"
 python3 "$GITHUB_WORKSPACE/ci/hackios/apply_chiron.py" kernel \
   --source xnu-src/xnu-8796.121.2 --report "$EVIDENCE/chiron-kernel-overlay.json"
 bash xnu-deps/setup.sh

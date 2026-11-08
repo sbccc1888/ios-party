@@ -1,0 +1,440 @@
+diff --git a/drivers/core/hakios.stubs.c b/drivers/core/hakios.stubs.c
+index ed5ca7f..e4e9793 100644
+--- a/drivers/core/hakios.stubs.c
++++ b/drivers/core/hakios.stubs.c
+@@ -71,6 +71,7 @@ void hakios_ddr_quiesce(void) {}
+ 
+ #ifndef HAKIOS_ADRENO
+ void hakios_adreno_init(void) {}
++void hakios_adreno_a540(void) {}
+ void hakios_adreno_quiesce(void) {}
+ void hakios_adreno_stop(void) {}
+ void hakios_adreno_minute(void) {}
+diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
+index 3f1f97a..a31995d 100644
+--- a/drivers/gpu/hakios.adreno.c
++++ b/drivers/gpu/hakios.adreno.c
+@@ -3850,3 +3850,398 @@ hakios_adreno_init(void)
+ 	}
+ 	printf("adreno: over; the system goes on starting\n");
+ }
++
++/* ---- the A540 of the MIX 2 (chiron, MSM8998) ---------------------------------------------------------
++ *
++ * Everything above this line is the redwood's Adreno 642L: its addresses, its firmware, its GMU's message
++ * queues. The A540 is a different generation in ways that matter more than the numbers, so it gets its own
++ * steps rather than a table of substitutions.
++ *
++ * What is the same: both are Adreno, both are behind a Qualcomm SMMUv2, both have a GMU, both are woken by
++ * switching a CX power domain on, gating clocks and releasing a processor. The read/write primitives, the
++ * wait and the block mapping above are used as they are.
++ *
++ * What differs, from the MSM8998 kernel (drivers/gpu/msm/adreno_a5xx.c) and the phone's device tree:
++ *
++ *   GPU registers   0x05000000, not 0x03d00000. Same 0x40000 length.
++ *   GMU             inside that window at word offsets, not a block of its own at 0x03d6a000. Its
++ *                   handshake is three registers -- CM3_SYSRESET, GENERAL_0, GENERAL_1 -- and not HFI:
++ *                   grep for hfi in drivers/gpu/msm finds nothing, and _gpmu_send_init_cmds() puts the
++ *                   firmware into the ring buffer for the command processor to carry instead.
++ *   GPUCC           0x05065000, 0x9000, and its GDSCR offsets are 0x1004/0x1094 where the 642L's are
++ *                   0x106c/0x100c. Both device nodes -- qcom,gpucc@5065000 and qcom,gfxcc@5065000 -- are
++ *                   the same address, which is the trap this driver fell into once already.
++ *   SMMU            0x05040000, 0x10000, qcom,kgsl-smmu-v2. Context banks start at base + size/2 and step
++ *                   by 1 << ID1[31]; stream 0 is gfx3d_user, stream 2 is gfx3d_secure.
++ *   Firmware        a540_gpmu.fw2 (a legacy fw2 container, not a660_gmu.bin), a530_pfp.fw and a530_pm4.fw
++ *                   as two separate command-processor images, and a540_zap.
++ *
++ * The steps below are read-only on purpose. This kernel has never touched an A540; the first thing worth
++ * having is what the block says about itself, because three of the facts the driver above the steps needs
++ * -- the SMMU's ID registers, the context bank's ACTLR, and whether the GMU is running -- cannot be
++ * obtained any other way. A write to the wrong register on a powered-down block does not return an error,
++ * it stops the phone.
++ *
++ *   adreno_a540=1   read what feeds the GPU: GPUCC and the GDSCRs
++ *   adreno_a540=2   read the GPU block: RBBM status and the two fault words
++ *   adreno_a540=3   read the GMU: the reset word, both general registers, its interrupt word
++ *   adreno_a540=4   read the SMMU's identity and decode it the way ArmSmmu4K does
++ *   adreno_a540=5   read both context banks: SCTLR, ACTLR, TTBR0, TTBCR
++ *   adreno_a540=6   read the command processor's ring, and the microcode base registers
++ *
++ * Every step announces what it is about to touch, then reports what it found. Nothing is written. If a
++ * step's reads do not look like anything this port knows, it says so and stops rather than going on.
++ */
++
++#define CHIRON_GPU_PHYS         0x05000000
++#define CHIRON_GPU_SIZE         0x40000
++#define CHIRON_GPUCC_PHYS       0x05065000
++#define CHIRON_GPUCC_SIZE       0x9000
++#define CHIRON_SMMU_PHYS        0x05040000
++#define CHIRON_SMMU_SIZE        0x10000
++
++static struct block chiron_gpu = { "gpu", CHIRON_GPU_PHYS, CHIRON_GPU_SIZE };
++static struct block chiron_gpucc = { "gpucc", CHIRON_GPUCC_PHYS, CHIRON_GPUCC_SIZE };
++static struct block chiron_smmu = { "smmu", CHIRON_SMMU_PHYS, CHIRON_SMMU_SIZE };
++
++/*
++ * GPUCC registers. Offsets from the MSM8998 kernel's a5xx_reg.h, whose entries are word offsets, so each
++ * one here is the index times four. The GDSCRs are in this block and not in the GPU block: the kernel's
++ * virt_base and virt_base_gfx look like one pointer per block, but both device nodes map 0x05065000.
++ */
++#define CHIRON_GPUCC_CX_GDSCR   0x01004         /* word 0x401: gpu_cx_gdsc */
++#define CHIRON_GPUCC_GX_GDSCR   0x01094         /* word 0x425: gpu_gx_gdsc */
++#define CHIRON_GPUCC_GX_BCR     0x01090         /* word 0x424: gpu_gx_sw_reset/dir */
++#define CHIRON_GPUCC_GX_DOMAIN  0x00130         /* word 0x4c: gpu_gx_domain_addr */
++#define CHIRON_GPUCC_CXO_CBCR   0x01020         /* word 0x408 */
++#define CHIRON_GPUCC_GX_CBCR    0x01098         /* word 0x426: the 3D core's clock */
++#define CHIRON_GPUCC_GX_RCGR    0x01070         /* word 0x41c */
++#define CHIRON_GDSCR_PWR_ON     (1u << 31)
++#define CHIRON_GDSCR_COLLAPSE   (1u << 0)
++
++/* GPU block registers, word offsets from a5xx_reg.h times four. */
++#define CHIRON_RBBM_STATUS              (0x4f5 * 4)
++#define CHIRON_RBBM_STATUS3             (0x530 * 4)
++#define CHIRON_RBBM_INT_0_STATUS        (0x4e1 * 4)
++#define CHIRON_RBBM_AHB_ERROR_STATUS    (0x4f4 * 4)
++#define CHIRON_CP_HW_FAULT              (0xb1a * 4)
++#define CHIRON_CP_INTERRUPT_STATUS      (0xb18 * 4)
++#define CHIRON_CP_PROTECT_STATUS        (0xb1c * 4)
++#define CHIRON_CP_RB_BASE               (0x800 * 4)
++#define CHIRON_CP_RB_CNTL               (0x802 * 4)
++#define CHIRON_CP_RB_RPTR               (0x806 * 4)
++#define CHIRON_CP_RB_WPTR               (0x807 * 4)
++#define CHIRON_CP_ME_CNTL               (0x832 * 4)
++#define CHIRON_CP_PFP_INSTR_BASE_LO     (0x835 * 4)
++#define CHIRON_CP_PFP_INSTR_BASE_HI     (0x836 * 4)
++#define CHIRON_CP_PM4_INSTR_BASE_LO     (0x838 * 4)
++#define CHIRON_CP_PM4_INSTR_BASE_HI     (0x839 * 4)
++
++/* GMU registers, also word offsets inside the GPU block. */
++#define CHIRON_GMU_AO_RBBM_INT_INFO     (0xa8d6 * 4)
++#define CHIRON_GMU_CM3_SYSRESET         (0xa8d8 * 4)
++#define CHIRON_GMU_GENERAL_0            (0xa8e0 * 4)
++#define CHIRON_GMU_GENERAL_1            (0xa8e1 * 4)
++#define CHIRON_GMU_FW_ALIVE             0xbabeface
++
++/* SMMU, arm-smmu.c: global page, then context banks at base + size/2. */
++#define CHIRON_SMMU_ID0         0x20
++#define CHIRON_SMMU_ID1         0x24
++#define CHIRON_SMMU_ID2         0x28
++#define CHIRON_SMMU_CB_SCTLR    0x00
++#define CHIRON_SMMU_CB_ACTLR    0x04
++#define CHIRON_SMMU_CB_TTBR0    0x20
++#define CHIRON_SMMU_CB_TTBCR    0x30
++
++/* The width table ArmSmmu4KContext.c uses. Code 0 is 32 bits, not "absent". */
++static const char *
++chiron_smmu_width(uint32_t code, uint32_t *bits)
++{
++	static const uint32_t widths[6] = { 32, 36, 40, 42, 44, 48 };
++
++	if (code >= 6) {
++		*bits = 0;
++		return "undefined";
++	}
++	*bits = widths[code];
++	return "";
++}
++
++/* ---- step 1: what feeds the GPU ---------------------------------------------------------------- */
++
++static bool
++chiron_step_gpucc(void)
++{
++	uint32_t cx, gx, bcr, domain, cxo, gxclk, rcgr;
++
++	announce("read the GPU's clock controller at 0x05065000, as the boot loader left it");
++	need(&chiron_gpucc);
++
++	cx = get(&chiron_gpucc, "CX GDSCR", CHIRON_GPUCC_CX_GDSCR);
++	gx = get(&chiron_gpucc, "GX GDSCR", CHIRON_GPUCC_GX_GDSCR);
++	bcr = get(&chiron_gpucc, "GX block reset", CHIRON_GPUCC_GX_BCR);
++	domain = get(&chiron_gpucc, "GX domain", CHIRON_GPUCC_GX_DOMAIN);
++	cxo = get(&chiron_gpucc, "CXO clock", CHIRON_GPUCC_CXO_CBCR);
++	gxclk = get(&chiron_gpucc, "GX clock", CHIRON_GPUCC_GX_CBCR);
++	rcgr = get(&chiron_gpucc, "GX clock source", CHIRON_GPUCC_GX_RCGR);
++
++	/*
++	 * gdsc.c reads PWR_ON at bit 31 and toggles SW_COLLAPSE at bit 0. Both bits in one line is the
++	 * answer to "is this half of the block up", which is the question that decides whether the reads
++	 * in the steps after this one are reading a live block or a switched-off one.
++	 */
++	printf("adreno_a540: 1: CX %s (PWR_ON %u, collapsed %u), GX %s (PWR_ON %u, collapsed %u)\n",
++	    (cx & CHIRON_GDSCR_PWR_ON) ? "up" : "DOWN", (cx & CHIRON_GDSCR_PWR_ON) ? 1 : 0, cx & CHIRON_GDSCR_COLLAPSE ? 1 : 0,
++	    (gx & CHIRON_GDSCR_PWR_ON) ? "up" : "DOWN", (gx & CHIRON_GDSCR_PWR_ON) ? 1 : 0, gx & CHIRON_GDSCR_COLLAPSE ? 1 : 0);
++	printf("adreno_a540: 1: GX block reset %#x, domain %#x, CXO clock %#x (on %u), GX clock %#x (on %u), source %#x\n",
++	    bcr, domain, cxo, cxo & 1u, gxclk, gxclk & 1u, rcgr);
++
++	if (!(cx & CHIRON_GDSCR_PWR_ON)) {
++		printf("adreno_a540: 1: the CX half is not powered. Nothing after this step can read a live block,\n"
++		    "adreno_a540: 1: and switching it on is a write this driver does not do yet. Stopping here.\n");
++		return false;
++	}
++	return true;
++}
++
++/* ---- step 2: what the block says about itself --------------------------------------------------- */
++
++static bool
++chiron_step_status(void)
++{
++	uint32_t status, status3, int0, hw_fault, ahb;
++
++	announce("read the GPU block's own status words at 0x05000000");
++	need(&chiron_gpu);
++
++	status = get(&chiron_gpu, "RBBM status", CHIRON_RBBM_STATUS);
++	status3 = get(&chiron_gpu, "RBBM status 3", CHIRON_RBBM_STATUS3);
++	int0 = get(&chiron_gpu, "RBBM interrupt 0", CHIRON_RBBM_INT_0_STATUS);
++	hw_fault = get(&chiron_gpu, "CP hardware fault", CHIRON_CP_HW_FAULT);
++	ahb = get(&chiron_gpu, "RBBM AHB error", CHIRON_RBBM_AHB_ERROR_STATUS);
++
++	/* These are the five the kernel reads in the function that dumps a device once something is wrong. */
++	printf("adreno_a540: 2: RBBM status %#x, status3 %#x, interrupts %#x, CP fault %#x, AHB error %#x\n",
++	    status, status3, int0, hw_fault, ahb);
++
++	/*
++	 * An all-zero or all-ones read of a block that should hold something is the signature of a window
++	 * that is mapped but not answering, which is what a powered-down GPU looks like from here.
++	 */
++	if ((status == 0 && status3 == 0 && int0 == 0) || (status == 0xffffffffu && status3 == 0xffffffffu)) {
++		printf("adreno_a540: 2: every status word reads %#x; the block is mapped but not answering. Stopping.\n",
++		    status);
++		return false;
++	}
++	return true;
++}
++
++/* ---- step 3: the GMU --------------------------------------------------------------------------- */
++
++static bool
++chiron_step_gmu(void)
++{
++	uint32_t reset, general0, general1, intr;
++
++	announce("read the GMU's handshake registers, which on this part are three words and not HFI");
++	reset = get(&chiron_gpu, "CM3 reset", CHIRON_GMU_CM3_SYSRESET);
++	general0 = get(&chiron_gpu, "general 0", CHIRON_GMU_GENERAL_0);
++	general1 = get(&chiron_gpu, "general 1", CHIRON_GMU_GENERAL_1);
++	intr = get(&chiron_gpu, "RBBM interrupt info", CHIRON_GMU_AO_RBBM_INT_INFO);
++
++	printf("adreno_a540: 3: CM3 reset %#x (in reset %u), GENERAL_0 %#x, GENERAL_1 %#x, RBBM interrupt info %#x\n",
++	    reset, reset & 1u, general0, general1, intr);
++
++	/*
++	 * a5xx_gpmu_start() waits for GENERAL_0 to become 0xBABEFACE and then for GENERAL_1 to be zero, so
++	 * this word is the whole answer to whether the GMU is running -- and if the phone came from Android,
++	 * it may well be, because kgsl starts it and the kernel here does not stop it.
++	 */
++	if (general0 == CHIRON_GMU_FW_ALIVE) {
++		printf("adreno_a540: 3: the GMU firmware is RUNNING (GENERAL_0 is 0xBABEFACE)%s\n",
++		    general1 ? "; GENERAL_1 reports an error the firmware named" : "");
++	} else {
++		printf("adreno_a540: 3: the GMU is not running (GENERAL_0 is %#x, and 0xBABEFACE means it is)\n", general0);
++	}
++	return true;
++}
++
++/* ---- step 4: the SMMU's identity --------------------------------------------------------------- */
++
++static bool
++chiron_step_smmu(void)
++{
++	uint32_t id0, id1, id2, va_code, pa_code, va_bits = 0, pa_bits = 0, stage1, granule, pgshift;
++	const char *va_note, *pa_note;
++
++	announce("read the SMMU's ID registers at 0x05040000 and decode them the way ArmSmmu4K does");
++	need(&chiron_smmu);
++
++	id0 = get(&chiron_smmu, "ID0", CHIRON_SMMU_ID0);
++	id1 = get(&chiron_smmu, "ID1", CHIRON_SMMU_ID1);
++	id2 = get(&chiron_smmu, "ID2", CHIRON_SMMU_ID2);
++
++	stage1 = (id0 >> 30) & 1u;
++	granule = (id2 >> 12) & 1u;
++	va_code = (id2 >> 8) & 0xf;
++	pa_code = (id2 >> 4) & 0xf;
++	va_note = chiron_smmu_width(va_code, &va_bits);
++	pa_note = chiron_smmu_width(pa_code, &pa_bits);
++	pgshift = ((id1 >> 31) & 1u) ? 16 : 12;
++
++	printf("adreno_a540: 4: stage 1 %u, 4K granule %u, VA code %u (%s%s%u), PA code %u (%s%s%u), bank stride %#x\n",
++	    stage1, granule, va_code, va_note, va_note[0] ? " " : "", va_bits, pa_code, pa_note,
++	    pa_note[0] ? " " : "", pa_bits, 1u << pgshift);
++
++	if (!stage1 || !granule || !va_bits || !pa_bits) {
++		printf("adreno_a540: 4: this SMMU does not offer what the port needs "
++		    "(stage 1, a 4K granule, and both widths). Stopping.\n");
++		return false;
++	}
++	printf("adreno_a540: 4: the SMMU is usable: input %u bits, output %u bits, banks %#x apart\n",
++	    va_bits, pa_bits, 1u << pgshift);
++	return true;
++}
++
++/* ---- step 5: the context banks ----------------------------------------------------------------- */
++
++static bool
++chiron_step_contexts(void)
++{
++	uint32_t cb_base, stride, bank, sctlr, actlr, ttbr0, ttbcr;
++
++	announce("read the two context banks: gfx3d_user on stream 0 and gfx3d_secure on stream 2");
++	announce("the device tree gives qcom,gpu-offset for the user bank only, so which index the secure "
++	    "one occupies is read here and not assumed");
++
++	/* arm-smmu.c: ARM_SMMU_CB_BASE(smmu) = base + (size >> 1), stride 1 << pgshift. */
++	cb_base = chiron_smmu.phys + (CHIRON_SMMU_SIZE >> 1);
++
++	/* Read back ID1 rather than keeping it: this step may be run with adreno_only. */
++	stride = ((rd(chiron_smmu.base + CHIRON_SMMU_ID1) >> 31) & 1u) ? 0x10000 : 0x1000;
++
++	for (bank = 0; bank < 2; bank++) {
++		vm_offset_t at = chiron_smmu.base + (cb_base - chiron_smmu.phys) + bank * stride;
++
++		if ((cb_base - chiron_smmu.phys) + bank * stride + CHIRON_SMMU_CB_TTBCR + 4 > CHIRON_SMMU_SIZE) {
++			printf("adreno_a540: 5: bank %u would be outside the %#x the SMMU occupies from 0x%x\n",
++			    bank, CHIRON_SMMU_SIZE, (uint32_t)CHIRON_SMMU_PHYS);
++			break;
++		}
++
++		sctlr = rd(at + CHIRON_SMMU_CB_SCTLR);
++		actlr = rd(at + CHIRON_SMMU_CB_ACTLR);
++		ttbr0 = rd(at + CHIRON_SMMU_CB_TTBR0);
++		ttbcr = rd(at + CHIRON_SMMU_CB_TTBCR);
++
++		printf("adreno_a540: 5: bank %u at %#x: SCTLR %#x (enabled %u), ACTLR %#x, TTBR0 %#x, TTBCR %#x\n",
++		    bank, (uint32_t)(cb_base + bank * stride), sctlr, sctlr & 1u, actlr, ttbr0, ttbcr);
++
++		/*
++		 * 0x70000000 is what the generic driver writes into ACTLR for SMMU_MODEL_QCOM_V2 and for
++		 * nothing else. Reading it is the difference between knowing the qcom branch is in use on this
++		 * silicon and having inferred it from the device tree's compatible string.
++		 */
++		if (actlr != 0) {
++			printf("adreno_a540: 5:   ACTLR is %s\n",
++			    actlr == 0x70000000u ? "0x70000000, which is qcom,smmu-v2" : "set, but not to the qcom value");
++		}
++	}
++	return true;
++}
++
++/* ---- step 6: the command processor ------------------------------------------------------------- */
++
++static bool
++chiron_step_cp(void)
++{
++	uint32_t base, cntl, rptr, wptr, me, pfp_lo, pfp_hi, pm4_lo, pm4_hi, int_status, protect;
++
++	announce("read the command processor's ring and its two microcode addresses");
++	base = get(&chiron_gpu, "ring base", CHIRON_CP_RB_BASE);
++	cntl = get(&chiron_gpu, "ring control", CHIRON_CP_RB_CNTL);
++	rptr = get(&chiron_gpu, "ring read pointer", CHIRON_CP_RB_RPTR);
++	wptr = get(&chiron_gpu, "ring write pointer", CHIRON_CP_RB_WPTR);
++	me = get(&chiron_gpu, "micro engine control", CHIRON_CP_ME_CNTL);
++	int_status = get(&chiron_gpu, "CP interrupt status", CHIRON_CP_INTERRUPT_STATUS);
++	protect = get(&chiron_gpu, "CP protect status", CHIRON_CP_PROTECT_STATUS);
++
++	printf("adreno_a540: 6: ring at %#x, control %#x, read up to %u, written up to %u, ME control %#x\n",
++	    base, cntl, rptr, wptr, me);
++	printf("adreno_a540: 6: CP interrupts %#x, protection %#x\n", int_status, protect);
++	printf("adreno_a540: 6: %s\n", me & 1u ? "the micro engine is HALTED" : "the micro engine is released");
++
++	/*
++	 * The two images this generation loads, separately: A5xx has no single SQE file. If these registers
++	 * hold addresses, a command processor is already running -- almost certainly the one kgsl started
++	 * before the handover -- and that changes what a driver here may do with it.
++	 */
++	pfp_lo = get(&chiron_gpu, "PFP base low", CHIRON_CP_PFP_INSTR_BASE_LO);
++	pfp_hi = get(&chiron_gpu, "PFP base high", CHIRON_CP_PFP_INSTR_BASE_HI);
++	pm4_lo = get(&chiron_gpu, "PM4 base low", CHIRON_CP_PM4_INSTR_BASE_LO);
++	pm4_hi = get(&chiron_gpu, "PM4 base high", CHIRON_CP_PM4_INSTR_BASE_HI);
++
++	printf("adreno_a540: 6: PFP microcode at %#llx, PM4 at %#llx%s\n",
++	    (uint64_t)pfp_hi << 32 | pfp_lo, (uint64_t)pm4_hi << 32 | pm4_lo,
++	    (pfp_lo | pfp_hi | pm4_lo | pm4_hi) ? "" : " (both zero: none loaded)");
++	return true;
++}
++
++static bool
++chiron_step_ring_alive(void)
++{
++	uint32_t first, second, tries;
++
++	announce("read the ring's read pointer twice, a moment apart: a running processor moves it");
++	first = rd(chiron_gpu.base + CHIRON_CP_RB_RPTR);
++	for (tries = 0; tries < 5; tries++) {
++		sleep_ms(200);
++		second = rd(chiron_gpu.base + CHIRON_CP_RB_RPTR);
++		if (second != first) {
++			printf("adreno_a540: 7: the read pointer moved from %u to %u: something is consuming the ring\n",
++			    first, second);
++			return true;
++		}
++		first = second;
++	}
++	printf("adreno_a540: 7: the read pointer stayed at %u for a second: nothing is consuming the ring\n", first);
++	return true;
++}
++
++static bool(*const chiron_steps[])(void) = {
++	chiron_step_gpucc, chiron_step_status, chiron_step_gmu, chiron_step_smmu, chiron_step_contexts, chiron_step_cp,
++	chiron_step_ring_alive,
++};
++#define CHIRON_STEPS    ((uint32_t)(sizeof(chiron_steps) / sizeof(chiron_steps[0])))
++
++static const char *const chiron_what[] = {
++	"", "the GPU's clock controller", "the GPU's status words", "the GMU", "the SMMU's identity",
++	"the SMMU context banks", "the command processor", "whether the ring is moving",
++};
++
++void
++hakios_adreno_a540(void)
++{
++	uint32_t last = 0, step_at = 0;
++
++	if (!PE_parse_boot_argn("adreno_a540", &last, sizeof(last)) || last == 0) {
++		return;
++	}
++	if (last > CHIRON_STEPS) {
++		last = CHIRON_STEPS;
++	}
++
++	printf("adreno_a540: the A540 of the MIX 2 (chiron, MSM8998); %u steps, read only\n", last);
++	printf("adreno_a540: gpu 0x%x, gpucc 0x%x, smmu 0x%x\n", CHIRON_GPU_PHYS, CHIRON_GPUCC_PHYS, CHIRON_SMMU_PHYS);
++
++	for (step_at = 0; step_at < last; step_at++) {
++		step = step_at + 1;                     /* (the framework's own step counter, for announce()) */
++		if (!chiron_steps[step_at]()) {
++			printf("adreno_a540: step %u: FAILED; the steps after it are not attempted\n", step_at + 1);
++			printf("adreno_a540: stopped at %s\n", chiron_what[step_at + 1]);
++			return;
++		}
++		printf("adreno_a540: step %u: done\n", step_at + 1);
++	}
++	printf("adreno_a540: all %u steps done; nothing was written\n", last);
++}
+\ No newline at end of file
+diff --git a/drivers/input/hakios.input.c b/drivers/input/hakios.input.c
+index 8452a55..13566e9 100644
+--- a/drivers/input/hakios.input.c
++++ b/drivers/input/hakios.input.c
+@@ -289,6 +289,7 @@ hakios_input_init(void)
+ 	hakios_ufs_init();
+ 	hakios_net_init();
+ 	hakios_adreno_init();
++	hakios_adreno_a540();
+ 	hakios_wifi_init();
+ 	hakios_adsp_init();
+ 	hakios_mpss_init();
+diff --git a/xnu/files/bsd/sys/hakios.input.h b/xnu/files/bsd/sys/hakios.input.h
+index bfb7d63..77f62a3 100644
+--- a/xnu/files/bsd/sys/hakios.input.h
++++ b/xnu/files/bsd/sys/hakios.input.h
+@@ -79,6 +79,7 @@ void hakios_adreno_init(void);         /* boot-arg adreno=N: the first N steps o
+ void hakios_adreno_quiesce(void);      /* on the way back to the loader: the GPU block stopped, out of our memory */
+ void hakios_adreno_stop(void);         /* before that, where the ending is no panic's: the GPU given back in order */
+ void hakios_adreno_minute(void);       /* once a minute: a line about how warm the GPU is, if it is in use */
++void hakios_adreno_a540(void);        /* boot-arg adreno_a540=N: the first N read-only steps of the MIX 2's A540 */
+ void hakios_wifi_init(void);           /* boot-arg wifi=1: the phone's Wi-Fi; wifi_step=N: the first N steps of it */
+ void hakios_adsp_init(void);           /* boot-arg adsp=1: the phone's audio DSP started and linked; adsp_step=N: the first N steps */
+ void hakios_mpss_init(void);           /* boot-arg modem=1: the phone's modem started and linked; modem_step=N: the first N steps */
