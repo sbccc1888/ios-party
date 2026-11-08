@@ -1,7 +1,7 @@
-diff --git a/drivers/core/hakios.stubs.c b/drivers/core/hakios.stubs.c
+diff --git a/bsd/dev/hakios.stubs.c b/bsd/dev/hakios.stubs.c
 index ed5ca7f..e4e9793 100644
---- a/drivers/core/hakios.stubs.c
-+++ b/drivers/core/hakios.stubs.c
+--- a/bsd/dev/hakios.stubs.c
++++ b/bsd/dev/hakios.stubs.c
 @@ -71,6 +71,7 @@ void hakios_ddr_quiesce(void) {}
  
  #ifndef HAKIOS_ADRENO
@@ -10,10 +10,10 @@ index ed5ca7f..e4e9793 100644
  void hakios_adreno_quiesce(void) {}
  void hakios_adreno_stop(void) {}
  void hakios_adreno_minute(void) {}
-diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
+diff --git a/bsd/dev/hakios.adreno.c b/bsd/dev/hakios.adreno.c
 index 3f1f97a..a31995d 100644
---- a/drivers/gpu/hakios.adreno.c
-+++ b/drivers/gpu/hakios.adreno.c
+--- a/bsd/dev/hakios.adreno.c
++++ b/bsd/dev/hakios.adreno.c
 @@ -3850,3 +3850,398 @@ hakios_adreno_init(void)
  	}
  	printf("adreno: over; the system goes on starting\n");
@@ -414,10 +414,10 @@ index 3f1f97a..a31995d 100644
 +	printf("adreno_a540: all %u steps done; nothing was written\n", last);
 +}
 \ No newline at end of file
-diff --git a/drivers/input/hakios.input.c b/drivers/input/hakios.input.c
+diff --git a/bsd/dev/hakios.input.c b/bsd/dev/hakios.input.c
 index 8452a55..13566e9 100644
---- a/drivers/input/hakios.input.c
-+++ b/drivers/input/hakios.input.c
+--- a/bsd/dev/hakios.input.c
++++ b/bsd/dev/hakios.input.c
 @@ -289,6 +289,7 @@ hakios_input_init(void)
  	hakios_ufs_init();
  	hakios_net_init();
@@ -426,10 +426,10 @@ index 8452a55..13566e9 100644
  	hakios_wifi_init();
  	hakios_adsp_init();
  	hakios_mpss_init();
-diff --git a/xnu/files/bsd/sys/hakios.input.h b/xnu/files/bsd/sys/hakios.input.h
+diff --git a/bsd/sys/hakios.input.h b/bsd/sys/hakios.input.h
 index bfb7d63..77f62a3 100644
---- a/xnu/files/bsd/sys/hakios.input.h
-+++ b/xnu/files/bsd/sys/hakios.input.h
+--- a/bsd/sys/hakios.input.h
++++ b/bsd/sys/hakios.input.h
 @@ -79,6 +79,7 @@ void hakios_adreno_init(void);         /* boot-arg adreno=N: the first N steps o
  void hakios_adreno_quiesce(void);      /* on the way back to the loader: the GPU block stopped, out of our memory */
  void hakios_adreno_stop(void);         /* before that, where the ending is no panic's: the GPU given back in order */
