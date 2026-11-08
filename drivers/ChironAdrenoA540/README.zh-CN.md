@@ -75,6 +75,7 @@ python3 tests/test_chiron_adreno_gmu.py    # GMU 启动握手
 python3 tests/test_chiron_adreno_smmu.py   # SMMU v2 context bank
 python3 tests/test_chiron_adreno_cpsw.py   # CP 微码分割
 python3 tests/test_chiron_adreno_cpstart.py # CP 环与 ME 启动
+python3 tests/test_chiron_adreno_bringup.py # 整链（共享寄存器模型）
 ```
 
 测试用真实固件验证解析结果，再逐一验证 11 种畸形输入被拒绝：
@@ -316,6 +317,34 @@ memcpy(ucode->hostptr, &fw->data[4], fw->size - 4);
 **结果 `0x20C`。** 内核注释说明了为什么减半：硬件要的是**四字**单位的 log2，不是双字。
 
 测试在 1024/2048/4096/8192/16384 五个尺寸上验证了大小字段跟着变，块字段恒为 `0x200`。
+
+## 整链集成测试
+
+单层测试各自用私有模型，查不出层与层之间的问题。`tests/Bringup.cpp` 用**一份共享的
+寄存器空间**把所有层串起来跑：
+
+```
+GPUCC 上电  →  SMMU context bank  →  GMU 握手  →  CP 环  →  微码  →  放开 ME
+```
+
+模型按**绝对地址**索引，所以 GPUCC（0x5065000）、SMMU（0x5040000）、GPU（0x5000000）
+三个窗口像真机一样互不重叠。哪一层踩到别人的寄存器，就会立刻暴露。
+
+顺序取自 `adreno_a5xx.c`：
+
+| 步骤 | 内核位置 |
+|---|---|
+| GMU 握手 | `a5xx_gpmu_init` → `a5xx_gpmu_start` (2203) |
+| CP 环 | `a5xx_rb_start` (2483) |
+| 微码加载 | `a5xx_rb_start` 内的 `a5xx_microcode_load` (2509) |
+| 放开 ME | `CP_ME_CNTL = 0` (2514) |
+
+集成测试额外验证两件事：
+
+1. **CP 环与 GMU 寄存器不重叠**：CP 在字 0x800+，GMU 在字 0xA800+，
+   `CP_RB_BASE*4 + 0x1000 <= GPMU_INST_RAM_BASE*4` 成立。
+2. **`CP_ME_CNTL` 是最后写的**：在环的 BASE 之后才放开微引擎，
+   否则引擎会在环描述符还没写完时就去读。
 
 ## 下一层
 
