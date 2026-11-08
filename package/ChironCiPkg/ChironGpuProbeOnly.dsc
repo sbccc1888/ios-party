@@ -29,4 +29,4 @@
   UefiRuntimeServicesTableLib|MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
 
 [Components]
-  ChironCiPkg/ChironGpuProbe.inf
+  ChironCiPkg/ChironProbe.inf
