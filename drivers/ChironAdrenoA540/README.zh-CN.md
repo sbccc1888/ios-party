@@ -73,6 +73,8 @@ python3 tests/test_chiron_adreno_fw2.py    # fw2 容器解析
 python3 tests/test_chiron_adreno_gpucc.py  # GPUCC 上电序列
 python3 tests/test_chiron_adreno_gmu.py    # GMU 启动握手
 python3 tests/test_chiron_adreno_smmu.py   # SMMU v2 context bank
+python3 tests/test_chiron_adreno_cpsw.py   # CP 微码分割
+python3 tests/test_chiron_adreno_cpstart.py # CP 环与 ME 启动
 ```
 
 测试用真实固件验证解析结果，再逐一验证 11 种畸形输入被拒绝：
@@ -266,6 +268,55 @@ bit29 AFE        1  ┘
 ASID 在 TTBR0 的 bit[55:48]。**右移 32 位后落在高字的 bit[23:16]**，即 ASID 7 写成
 `0x00070000`，**不是 `0x00000007`**。写成后者会把 ASID 放进 bit[39:32]，那是错的字段。
 
+## CP 微码：几乎没有格式
+
+`adreno_a5xx.c:2534` 的 `_load_firmware()` 做四件事：
+
+```c
+kgsl_allocate_global(device, ucode, fw->size - 4, KGSL_MEMFLAGS_GPUREADONLY, 0, "ucode");
+memcpy(ucode->hostptr, &fw->data[4], fw->size - 4);
+*ucode_size   = (fw->size - 4) / sizeof(uint32_t);
+*ucode_version = *(unsigned int *)&fw->data[4];
+```
+
+**丢掉前 4 字节，从 `+4` 起整块拷贝。** 没有容器、没有分段头、没有校验和。
+
+| 文件 | 大小 | +4 | +8 |
+|---|---|---|---|
+| `a530_pfp.fw` | 16820 | `0x005ff112` | `0x00000fec` (4012) |
+| `a530_pm4.fw` | 19652 | `0x005ff066` | `0x000012b0` (4784) |
+
+`+4` 那个 dword 同时就是 `ucode_version`。`+8` 看起来像指令数，但内核从不读它，
+所以它只是载荷的第一个字，**不要当成独立长度字段**。
+
+## CP 启动
+
+`adreno_a5xx.c:2483` 的 `a5xx_rb_start()`，寄存器索引在 `a5xx_reg.h:60-91`，同样是字偏移。
+
+| 顺序 | 寄存器 | 字索引 | 内容 |
+|---|---|---|---|
+| 1 | `CP_RB_RPTR_ADDR` | 0x804/0x805 | 硬件写读指针的位置（64 位）|
+| 2 | `CP_RB_CNTL` | 0x802 | 环大小 / 块大小（log2）|
+| 3 | `CP_RB_BASE` | 0x800/0x801 | 环在 GPU 地址空间的位置（64 位）|
+| 4 | — | — | 加载 PFP / PM4 到 ME RAM |
+| 5 | `CP_ME_CNTL` | 0x832 | **写 0 清 ME_HALT，微引擎开跑** |
+
+### `CP_RB_CNTL` 的推导
+
+```c
+#define A5XX_CP_RB_CNTL_DEFAULT (((ilog2(4) << 8) & 0x1F00) | \
+                                 (ilog2(KGSL_RB_DWORDS >> 1) & 0x3F))
+```
+
+`KGSL_RB_SIZE = 32 KiB`（`adreno_ringbuffer.h:29`）→ `KGSL_RB_DWORDS = 8192`。
+
+- `ilog2(4) = 2` → `2 << 8 = 0x200`（块大小字段）
+- `ilog2(8192 >> 1) = ilog2(4096) = 12` → `0x0C`（大小字段）
+
+**结果 `0x20C`。** 内核注释说明了为什么减半：硬件要的是**四字**单位的 log2，不是双字。
+
+测试在 1024/2048/4096/8192/16384 五个尺寸上验证了大小字段跟着变，块字段恒为 `0x200`。
+
 ## 下一层
 
 按 `research/CHIRON_GPU_A540_DELTA.zh-CN.md` 的顺序：
@@ -274,5 +325,5 @@ ASID 在 TTBR0 的 bit[55:48]。**右移 32 位后落在高字的 bit[23:16]**�
 2. ~~GPUCC 上电与时钟~~（完成）
 3. ~~GMU 启动握手~~（完成；HFI 消息集待做）
 4. ~~SMMU v2 context bank 编程~~（完成；页表建立待做）
-5. PFP/PM4 加载 + CP 初始化
+5. ~~CP 微码分割 + 环编程~~（完成；ME 初始化包待做）
 6. 命令提交与 fence
